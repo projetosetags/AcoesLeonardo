@@ -4,35 +4,153 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=5,user-scalable=yes">
 <meta name="theme-color" content="#0f172a">
-<title>Ações Leonardo Emanoel MM| Controle de Investimentos</title>
+<title>Ações Leonardo | Controle de Investimentos</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
 <style>
-:root{--bg:#f5f7fb;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--navy:#0f172a;--blue:#2563eb;--green:#15803d;--red:#b91c1c;--amber:#b45309;--soft:#f8fafc;--radius:18px;--shadow:0 12px 35px rgba(15,23,42,.07)}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.hidden{display:none!important}button,input,select,textarea{font:inherit}.topbar{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;padding:22px 0;box-shadow:0 8px 28px rgba(15,23,42,.18)}.wrap{width:min(1500px,calc(100% - 28px));margin:auto}.brand{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}.brand h1{margin:0;font-size:clamp(22px,3vw,34px);letter-spacing:-.03em}.brand p{margin:5px 0 0;color:#cbd5e1}.userbox{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pill{border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.09);padding:8px 12px;border-radius:999px;font-size:12px}.btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer;transition:.18s}.btn:hover{transform:translateY(-1px)}.btn-primary{background:var(--blue);color:#fff}.btn-dark{background:var(--navy);color:#fff}.btn-light{background:#fff;color:var(--navy)}.btn-soft{background:#eef2ff;color:#1e3a8a}.btn-danger{background:#fee2e2;color:#991b1b}.btn-small{padding:7px 10px;font-size:12px}.nav{display:flex;gap:8px;overflow:auto;padding:16px 0 4px;scrollbar-width:thin}.nav button{white-space:nowrap;border:1px solid var(--line);background:#fff;color:#334155;border-radius:999px;padding:9px 14px;font-weight:800;cursor:pointer}.nav button.active{background:var(--navy);border-color:var(--navy);color:#fff}.page{display:none;padding:14px 0 34px}.page.active{display:block}.grid-kpi{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:12px}.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:17px;box-shadow:var(--shadow);min-height:112px}.kpi .label{font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.kpi .value{margin-top:10px;font-size:clamp(20px,2.4vw,29px);font-weight:900;letter-spacing:-.03em}.kpi .sub{margin-top:5px;font-size:11px;color:var(--muted)}.positive{color:var(--green)!important}.negative{color:var(--red)!important}.neutral{color:var(--muted)!important}.grid-2{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;margin-top:14px}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}.card h2,.card h3{margin:0 0 14px}.card h2{font-size:18px}.card h3{font-size:15px}.card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.muted{color:var(--muted)}.tiny{font-size:11px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}.table{width:100%;border-collapse:collapse;min-width:780px}.table th{background:#f8fafc;color:#475569;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:11px;border-bottom:1px solid var(--line);white-space:nowrap}.table td{padding:11px;border-bottom:1px solid #eef2f7;font-size:13px;vertical-align:middle}.table tr:last-child td{border-bottom:0}.ticker{font-weight:950;letter-spacing:.03em}.signal{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:950;white-space:nowrap}.signal-buy{background:#dcfce7;color:#166534}.signal-hold{background:#e0e7ff;color:#3730a3}.signal-sell{background:#fee2e2;color:#991b1b}.signal-warn{background:#fef3c7;color:#92400e}.signal-none{background:#f1f5f9;color:#475569}.form-grid{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:11px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:11px;font-weight:900;color:#475569}.field input,.field select,.field textarea{width:100%;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:var(--ink);padding:10px 11px;outline:none}.field input:focus,.field select:focus,.field textarea:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(37,99,235,.10)}.field textarea{min-height:80px;resize:vertical}.span-2{grid-column:span 2}.span-3{grid-column:span 3}.span-6{grid-column:span 6}.actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.notice{border-radius:14px;padding:13px 15px;border:1px solid #fde68a;background:#fffbeb;color:#78350f;font-size:12px;line-height:1.5}.notice.info{border-color:#bfdbfe;background:#eff6ff;color:#1e3a8a}.insights{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.insight{border:1px solid var(--line);border-radius:14px;padding:13px;background:#fff}.insight-top{display:flex;justify-content:space-between;gap:10px;align-items:start}.insight .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}.metric{padding:8px;border-radius:10px;background:#f8fafc}.metric b{display:block;font-size:12px}.metric span{font-size:10px;color:var(--muted)}.chart-box{position:relative;height:330px}.auth-shell{min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#f8fafc 50%,#f8fafc 100%)}.auth-card{width:min(540px,100%);background:#fff;border-radius:24px;padding:28px;box-shadow:0 28px 80px rgba(15,23,42,.2)}.auth-card h1{margin:0;font-size:30px}.auth-card p{color:var(--muted)}.auth-fields{display:grid;gap:12px;margin-top:20px}.auth-actions{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}.statusline{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px}.dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}.dot.ok{background:#22c55e}.dot.err{background:#ef4444}.empty{padding:28px;text-align:center;color:var(--muted)}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.price-badge{font-variant-numeric:tabular-nums;font-weight:900}.footer{color:var(--muted);font-size:11px;padding:0 0 30px;line-height:1.5}.loading{opacity:.55;pointer-events:none}.flash{position:fixed;right:18px;bottom:18px;max-width:min(420px,calc(100% - 36px));padding:12px 15px;background:#0f172a;color:#fff;border-radius:13px;box-shadow:0 18px 45px rgba(15,23,42,.25);z-index:9999;font-size:12px;display:none}.flash.show{display:block}.flash.error{background:#991b1b}.flash.success{background:#166534}@media(max-width:1180px){.grid-kpi{grid-template-columns:repeat(3,1fr)}.form-grid{grid-template-columns:repeat(3,1fr)}.span-6{grid-column:span 3}.span-3{grid-column:span 3}.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr 1fr}}@media(max-width:720px){.wrap{width:min(100% - 18px,1500px)}.grid-kpi{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr 1fr}.span-2,.span-3,.span-6{grid-column:span 2}.grid-3{grid-template-columns:1fr}.insights{grid-template-columns:1fr}.kpi{min-height:98px;padding:14px}.brand{align-items:flex-start}.chart-box{height:280px}}@media(max-width:430px){.grid-kpi{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.span-2,.span-3,.span-6{grid-column:span 1}.auth-card{padding:20px}.card{padding:14px}}
+:root{--bg:#f5f7fb;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--navy:#0f172a;--blue:#2563eb;--green:#15803d;--red:#b91c1c;--amber:#b45309;--soft:#f8fafc;--radius:18px;--shadow:0 12px 35px rgba(15,23,42,.07)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.hidden{display:none!important}
+button,input,select,textarea{font:inherit}
+.topbar{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;padding:22px 0;box-shadow:0 8px 28px rgba(15,23,42,.18)}
+.wrap{width:min(1500px,calc(100% - 28px));margin:auto}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.brand h1{margin:0;font-size:clamp(22px,3vw,34px);letter-spacing:-.03em}
+.brand p{margin:5px 0 0;color:#cbd5e1}
+.userbox{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.09);padding:8px 12px;border-radius:999px;font-size:12px}
+.btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer;transition:.18s}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-dark{background:var(--navy);color:#fff}
+.btn-light{background:#fff;color:var(--navy)}
+.btn-soft{background:#eef2ff;color:#1e3a8a}
+.btn-danger{background:#fee2e2;color:#991b1b}
+.btn-small{padding:7px 10px;font-size:12px}
+.nav{display:flex;gap:8px;overflow:auto;padding:16px 0 4px;scrollbar-width:thin}
+.nav button{white-space:nowrap;border:1px solid var(--line);background:#fff;color:#334155;border-radius:999px;padding:9px 14px;font-weight:800;cursor:pointer}
+.nav button.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.page{display:none;padding:14px 0 34px}
+.page.active{display:block}
+.grid-kpi{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:17px;box-shadow:var(--shadow);min-height:112px}
+.kpi .label{font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.kpi .value{margin-top:10px;font-size:clamp(20px,2.4vw,29px);font-weight:900;letter-spacing:-.03em}
+.kpi .sub{margin-top:5px;font-size:11px;color:var(--muted)}
+.positive{color:var(--green)!important}
+.negative{color:var(--red)!important}
+.neutral{color:var(--muted)!important}
+.grid-2{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;margin-top:14px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+.card h2,.card h3{margin:0 0 14px}
+.card h2{font-size:18px}
+.card h3{font-size:15px}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.muted{color:var(--muted)}
+.tiny{font-size:11px}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}
+.table{width:100%;border-collapse:collapse;min-width:780px}
+.table th{background:#f8fafc;color:#475569;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:11px;border-bottom:1px solid var(--line);white-space:nowrap}
+.table td{padding:11px;border-bottom:1px solid #eef2f7;font-size:13px;vertical-align:middle}
+.table tr:last-child td{border-bottom:0}
+.ticker{font-weight:950;letter-spacing:.03em}
+.signal{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:950;white-space:nowrap}
+.signal-buy{background:#dcfce7;color:#166534}
+.signal-hold{background:#e0e7ff;color:#3730a3}
+.signal-sell{background:#fee2e2;color:#991b1b}
+.signal-warn{background:#fef3c7;color:#92400e}
+.signal-none{background:#f1f5f9;color:#475569}
+.form-grid{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:11px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:11px;font-weight:900;color:#475569}
+.field input,.field select,.field textarea{width:100%;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:var(--ink);padding:10px 11px;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+.field textarea{min-height:80px;resize:vertical}
+.span-2{grid-column:span 2}
+.span-3{grid-column:span 3}
+.span-6{grid-column:span 6}
+.actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.notice{border-radius:14px;padding:13px 15px;border:1px solid #fde68a;background:#fffbeb;color:#78350f;font-size:12px;line-height:1.5}
+.notice.info{border-color:#bfdbfe;background:#eff6ff;color:#1e3a8a}
+.insights{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.insight{border:1px solid var(--line);border-radius:14px;padding:13px;background:#fff}
+.insight-top{display:flex;justify-content:space-between;gap:10px;align-items:start}
+.insight .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}
+.metric{padding:8px;border-radius:10px;background:#f8fafc}
+.metric b{display:block;font-size:12px}
+.metric span{font-size:10px;color:var(--muted)}
+.chart-box{position:relative;height:330px}
+.auth-shell{min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#f8fafc 50%,#f8fafc 100%)}
+.auth-card{width:min(540px,100%);background:#fff;border-radius:24px;padding:28px;box-shadow:0 28px 80px rgba(15,23,42,.2)}
+.auth-card h1{margin:0;font-size:30px}
+.auth-card p{color:var(--muted)}
+.statusline{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px}
+.dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
+.dot.ok{background:#22c55e}
+.dot.err{background:#ef4444}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.price-badge{font-variant-numeric:tabular-nums;font-weight:900}
+.footer{color:var(--muted);font-size:11px;padding:0 0 30px;line-height:1.5}
+.loading{opacity:.55;pointer-events:none}
+.flash{position:fixed;right:18px;bottom:18px;max-width:min(420px,calc(100% - 36px));padding:12px 15px;background:#0f172a;color:#fff;border-radius:13px;box-shadow:0 18px 45px rgba(15,23,42,.25);z-index:9999;font-size:12px;display:none}
+.flash.show{display:block}
+.flash.error{background:#991b1b}
+.flash.success{background:#166534}
+@media(max-width:1180px){
+.grid-kpi{grid-template-columns:repeat(3,1fr)}
+.form-grid{grid-template-columns:repeat(3,1fr)}
+.span-6{grid-column:span 3}
+.span-3{grid-column:span 3}
+.grid-2{grid-template-columns:1fr}
+.grid-3{grid-template-columns:1fr 1fr}
+}
+@media(max-width:720px){
+.wrap{width:min(100% - 18px,1500px)}
+.grid-kpi{grid-template-columns:1fr 1fr}
+.form-grid{grid-template-columns:1fr 1fr}
+.span-2,.span-3,.span-6{grid-column:span 2}
+.grid-3{grid-template-columns:1fr}
+.insights{grid-template-columns:1fr}
+.kpi{min-height:98px;padding:14px}
+.brand{align-items:flex-start}
+.chart-box{height:280px}
+}
+@media(max-width:430px){
+.grid-kpi{grid-template-columns:1fr}
+.form-grid{grid-template-columns:1fr}
+.span-2,.span-3,.span-6{grid-column:span 1}
+.auth-card{padding:20px}
+.card{padding:14px}
+}
 </style>
 </head>
 <body>
 <div id="authShell" class="auth-shell">
-<div class="auth-card">
+<div class="auth-card" style="text-align:center">
 <div class="pill" style="display:inline-block;background:#eef2ff;color:#1e3a8a;border-color:#c7d2fe">CONTROLE DE INVESTIMENTOS</div>
 <h1 style="margin-top:12px">Ações Leonardo</h1>
-<p>Compras, vendas, carteira, lucro/prejuízo, proventos e sinais técnicos com cotação online.</p>
-<div class="auth-fields">
-<div class="field"><label>E-MAIL</label><input id="authEmail" type="email" autocomplete="email" placeholder="seu@email.com"></div>
-<div class="field"><label>SENHA</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="mínimo 6 caracteres"></div>
+<p id="authMsg">Iniciando acesso automático seguro...</p>
+<div class="statusline" style="justify-content:center;margin-top:18px">
+<span class="dot ok"></span>
+<span>Sem e-mail e sem senha</span>
 </div>
-<div class="auth-actions">
-<button class="btn btn-primary" id="btnEntrar">Entrar</button>
-<button class="btn btn-soft" id="btnCriarConta">Criar acesso</button>
-</div>
-<div id="authMsg" class="notice info" style="margin-top:16px">O banco já está configurado. No primeiro acesso, crie uma conta; os dados ficam protegidos por usuário.</div>
 </div>
 </div>
 <div id="appShell" class="hidden">
 <header class="topbar">
 <div class="wrap brand">
-<div><h1>Ações Leonardo</h1><p>Leonardo Emanoel Machado Monteiro • Controle completo da carteira</p></div>
-<div class="userbox"><span id="quoteStatus" class="pill">COTAÇÃO: aguardando</span><span id="userEmail" class="pill">—</span><button id="btnSair" class="btn btn-light btn-small">Sair</button></div>
+<div>
+<h1>Ações Leonardo</h1>
+<p>Leonardo Emanoel Machado Monteiro • Controle completo da carteira</p>
+</div>
+<div class="userbox">
+<span id="quoteStatus" class="pill">COTAÇÃO: aguardando</span>
+<span id="userEmail" class="pill">ACESSO AUTOMÁTICO</span>
+</div>
 </div>
 </header>
 <main class="wrap">
@@ -45,60 +163,281 @@
 </nav>
 <section id="page-dashboard" class="page active">
 <div class="grid-kpi">
-<div class="kpi"><div class="label">Capital investido</div><div id="kpiInvestido" class="value">R$ 0,00</div><div class="sub">Custo das posições abertas</div></div>
-<div class="kpi"><div class="label">Valor atual</div><div id="kpiAtual" class="value">R$ 0,00</div><div class="sub">Carteira pela cotação disponível</div></div>
-<div class="kpi"><div class="label">Resultado aberto</div><div id="kpiAberto" class="value">R$ 0,00</div><div id="kpiAbertoPct" class="sub">0,00%</div></div>
-<div class="kpi"><div class="label">Lucro/prejuízo realizado</div><div id="kpiRealizado" class="value">R$ 0,00</div><div class="sub">Vendas menos custo e taxas</div></div>
-<div class="kpi"><div class="label">Proventos</div><div id="kpiProventos" class="value">R$ 0,00</div><div class="sub">Dividendos, JCP e outros</div></div>
-<div class="kpi"><div class="label">Resultado total</div><div id="kpiTotal" class="value">R$ 0,00</div><div class="sub">Aberto + realizado + proventos</div></div>
+<div class="kpi">
+<div class="label">Capital investido</div>
+<div id="kpiInvestido" class="value">R$ 0,00</div>
+<div class="sub">Custo das posições abertas</div>
+</div>
+<div class="kpi">
+<div class="label">Valor atual</div>
+<div id="kpiAtual" class="value">R$ 0,00</div>
+<div class="sub">Carteira pela cotação disponível</div>
+</div>
+<div class="kpi">
+<div class="label">Resultado aberto</div>
+<div id="kpiAberto" class="value">R$ 0,00</div>
+<div id="kpiAbertoPct" class="sub">0,00%</div>
+</div>
+<div class="kpi">
+<div class="label">Lucro/prejuízo realizado</div>
+<div id="kpiRealizado" class="value">R$ 0,00</div>
+<div class="sub">Vendas menos custo e taxas</div>
+</div>
+<div class="kpi">
+<div class="label">Proventos</div>
+<div id="kpiProventos" class="value">R$ 0,00</div>
+<div class="sub">Dividendos, JCP e outros</div>
+</div>
+<div class="kpi">
+<div class="label">Resultado total</div>
+<div id="kpiTotal" class="value">R$ 0,00</div>
+<div class="sub">Aberto + realizado + proventos</div>
+</div>
 </div>
 <div class="grid-2">
-<div class="card"><div class="card-head"><div><h2>Carteira: preço médio x cotação</h2><div class="muted tiny">Atualiza automaticamente a cada 5 minutos.</div></div><button id="btnAtualizarCotacoes" class="btn btn-soft btn-small">Atualizar agora</button></div><div class="chart-box"><canvas id="grafCarteira"></canvas></div></div>
-<div class="card"><h2>Sinais técnicos da semana</h2><div class="notice">Os sinais abaixo são <b>indicadores técnicos automáticos</b>, baseados em preço, médias móveis e variação recente. Não constituem recomendação individual de investimento nem substituem análise de risco, fundamentos e suitability.</div><div id="insights" class="insights" style="margin-top:12px"></div></div>
+<div class="card">
+<div class="card-head">
+<div>
+<h2>Carteira: preço médio x cotação</h2>
+<div class="muted tiny">Atualiza automaticamente a cada 5 minutos.</div>
+</div>
+<button id="btnAtualizarCotacoes" class="btn btn-soft btn-small">Atualizar agora</button>
+</div>
+<div class="chart-box">
+<canvas id="grafCarteira"></canvas>
+</div>
+</div>
+<div class="card">
+<h2>Sinais técnicos da semana</h2>
+<div class="notice">Os sinais abaixo são <b>indicadores técnicos automáticos</b>, baseados em preço, médias móveis e variação recente. Não constituem recomendação individual de investimento nem substituem análise de risco, fundamentos e suitability.</div>
+<div id="insights" class="insights" style="margin-top:12px"></div>
+</div>
 </div>
 <div class="grid-2">
-<div class="card"><h2>Resultado por ativo</h2><div class="chart-box"><canvas id="grafResultado"></canvas></div></div>
-<div class="card"><div class="card-head"><h2>Últimas operações</h2><button class="btn btn-soft btn-small" data-go="operacoes">Ver todas</button></div><div id="ultimasOperacoes"></div></div>
+<div class="card">
+<h2>Resultado por ativo</h2>
+<div class="chart-box">
+<canvas id="grafResultado"></canvas>
+</div>
+</div>
+<div class="card">
+<div class="card-head">
+<h2>Últimas operações</h2>
+<button class="btn btn-soft btn-small" data-go="operacoes">Ver todas</button>
+</div>
+<div id="ultimasOperacoes"></div>
+</div>
 </div>
 </section>
 <section id="page-operacoes" class="page">
 <div class="card">
-<div class="card-head"><div><h2>Registrar compra ou venda</h2><div class="muted tiny">O preço médio e o lucro/prejuízo são recalculados automaticamente.</div></div><button id="btnExportarCsv" class="btn btn-soft btn-small">Exportar CSV</button></div>
+<div class="card-head">
+<div>
+<h2>Registrar compra ou venda</h2>
+<div class="muted tiny">O preço médio e o lucro/prejuízo são recalculados automaticamente.</div>
+</div>
+<button id="btnExportarCsv" class="btn btn-soft btn-small">Exportar CSV</button>
+</div>
 <form id="formOperacao" class="form-grid">
 <input id="opId" type="hidden">
-<div class="field"><label>DATA</label><input id="opData" type="date" required></div>
-<div class="field"><label>TIPO</label><select id="opTipo" required><option value="COMPRA">COMPRA</option><option value="VENDA">VENDA</option></select></div>
-<div class="field"><label>ATIVO</label><select id="opTicker" required></select></div>
-<div class="field"><label>QUANTIDADE</label><input id="opQtd" type="number" min="0.000001" step="0.000001" required></div>
-<div class="field"><label>PREÇO UNITÁRIO</label><input id="opPreco" type="number" min="0" step="0.000001" required></div>
-<div class="field"><label>TAXAS</label><input id="opTaxas" type="number" min="0" step="0.01" value="0"></div>
-<div class="field span-3"><label>OBSERVAÇÃO</label><input id="opObs" type="text" placeholder="Ex.: compra mensal, realização parcial..."></div>
-<div class="actions span-3"><button type="button" id="btnUsarCotacao" class="btn btn-soft">Usar cotação atual</button><button type="submit" class="btn btn-primary">Salvar operação</button><button type="button" id="btnCancelarOperacao" class="btn btn-danger hidden">Cancelar edição</button></div>
+<div class="field">
+<label>DATA</label>
+<input id="opData" type="date" required>
+</div>
+<div class="field">
+<label>TIPO</label>
+<select id="opTipo" required>
+<option value="COMPRA">COMPRA</option>
+<option value="VENDA">VENDA</option>
+</select>
+</div>
+<div class="field">
+<label>ATIVO</label>
+<select id="opTicker" required></select>
+</div>
+<div class="field">
+<label>QUANTIDADE</label>
+<input id="opQtd" type="number" min="0.000001" step="0.000001" required>
+</div>
+<div class="field">
+<label>PREÇO UNITÁRIO</label>
+<input id="opPreco" type="number" min="0" step="0.000001" required>
+</div>
+<div class="field">
+<label>TAXAS</label>
+<input id="opTaxas" type="number" min="0" step="0.01" value="0">
+</div>
+<div class="field span-3">
+<label>OBSERVAÇÃO</label>
+<input id="opObs" type="text" placeholder="Ex.: compra mensal, realização parcial...">
+</div>
+<div class="actions span-3">
+<button type="button" id="btnUsarCotacao" class="btn btn-soft">Usar cotação atual</button>
+<button type="submit" class="btn btn-primary">Salvar operação</button>
+<button type="button" id="btnCancelarOperacao" class="btn btn-danger hidden">Cancelar edição</button>
+</div>
 </form>
 </div>
-<div class="card" style="margin-top:14px"><h2>Histórico de operações</h2><div id="tabelaOperacoes"></div></div>
+<div class="card" style="margin-top:14px">
+<h2>Histórico de operações</h2>
+<div id="tabelaOperacoes"></div>
+</div>
 </section>
 <section id="page-carteira" class="page">
-<div class="card"><div class="card-head"><div><h2>Posições atuais</h2><div class="muted tiny">Quantidade, preço médio, valor de mercado e resultado.</div></div><button class="btn btn-soft btn-small" id="btnAtualizarCotacoes2">Atualizar cotações</button></div><div id="tabelaCarteira"></div></div>
+<div class="card">
+<div class="card-head">
+<div>
+<h2>Posições atuais</h2>
+<div class="muted tiny">Quantidade, preço médio, valor de mercado e resultado.</div>
+</div>
+<button class="btn btn-soft btn-small" id="btnAtualizarCotacoes2">Atualizar cotações</button>
+</div>
+<div id="tabelaCarteira"></div>
+</div>
 </section>
 <section id="page-proventos" class="page">
 <div class="grid-2">
-<div class="card"><h2>Registrar provento</h2><form id="formProvento" class="form-grid" style="grid-template-columns:repeat(2,1fr)"><input id="provId" type="hidden"><div class="field"><label>DATA</label><input id="provData" type="date" required></div><div class="field"><label>ATIVO</label><select id="provTicker"></select></div><div class="field"><label>TIPO</label><select id="provTipo"><option>DIVIDENDO</option><option>JCP</option><option>RENDIMENTO</option><option>BONIFICAÇÃO</option><option>OUTRO</option></select></div><div class="field"><label>VALOR</label><input id="provValor" type="number" min="0" step="0.01" required></div><div class="field span-2"><label>OBSERVAÇÃO</label><input id="provObs" type="text"></div><div class="actions span-2"><button class="btn btn-primary">Salvar provento</button><button type="button" id="btnCancelarProv" class="btn btn-danger hidden">Cancelar edição</button></div></form></div>
-<div class="card"><h2>Resumo de renda</h2><div class="grid-kpi" style="grid-template-columns:1fr 1fr"><div class="kpi"><div class="label">Total recebido</div><div id="provTotal" class="value">R$ 0,00</div></div><div class="kpi"><div class="label">Ano atual</div><div id="provAno" class="value">R$ 0,00</div></div></div></div>
+<div class="card">
+<h2>Registrar provento</h2>
+<form id="formProvento" class="form-grid" style="grid-template-columns:repeat(2,1fr)">
+<input id="provId" type="hidden">
+<div class="field">
+<label>DATA</label>
+<input id="provData" type="date" required>
 </div>
-<div class="card" style="margin-top:14px"><h2>Histórico de proventos</h2><div id="tabelaProventos"></div></div>
+<div class="field">
+<label>ATIVO</label>
+<select id="provTicker"></select>
+</div>
+<div class="field">
+<label>TIPO</label>
+<select id="provTipo">
+<option>DIVIDENDO</option>
+<option>JCP</option>
+<option>RENDIMENTO</option>
+<option>BONIFICAÇÃO</option>
+<option>OUTRO</option>
+</select>
+</div>
+<div class="field">
+<label>VALOR</label>
+<input id="provValor" type="number" min="0" step="0.01" required>
+</div>
+<div class="field span-2">
+<label>OBSERVAÇÃO</label>
+<input id="provObs" type="text">
+</div>
+<div class="actions span-2">
+<button class="btn btn-primary">Salvar provento</button>
+<button type="button" id="btnCancelarProv" class="btn btn-danger hidden">Cancelar edição</button>
+</div>
+</form>
+</div>
+<div class="card">
+<h2>Resumo de renda</h2>
+<div class="grid-kpi" style="grid-template-columns:1fr 1fr">
+<div class="kpi">
+<div class="label">Total recebido</div>
+<div id="provTotal" class="value">R$ 0,00</div>
+</div>
+<div class="kpi">
+<div class="label">Ano atual</div>
+<div id="provAno" class="value">R$ 0,00</div>
+</div>
+</div>
+</div>
+</div>
+<div class="card" style="margin-top:14px">
+<h2>Histórico de proventos</h2>
+<div id="tabelaProventos"></div>
+</div>
 </section>
 <section id="page-ativos" class="page">
 <div class="grid-2">
-<div class="card"><h2>Ativos monitorados</h2><form id="formAtivo" class="form-grid" style="grid-template-columns:repeat(2,1fr)"><input id="ativoId" type="hidden"><input id="ativoTickerOriginal" type="hidden"><div class="field"><label>TICKER</label><input id="ativoTicker" type="text" maxlength="18" required placeholder="Ex.: PETR4"></div><div class="field"><label>CATEGORIA</label><select id="ativoCategoria"><option>ACAO</option><option>FII</option><option>ETF</option><option>BDR</option><option>OUTRO</option></select></div><div class="field span-2"><label>NOME / DESCRIÇÃO</label><input id="ativoNome" type="text" placeholder="Opcional"></div><div class="actions span-2"><button class="btn btn-primary">Salvar ativo</button><button type="button" id="btnCancelarAtivo" class="btn btn-danger hidden">Cancelar edição</button></div></form><div id="tabelaAtivos" style="margin-top:14px"></div></div>
-<div class="card"><h2>Cotação online</h2><div class="notice info">O painel tenta usar uma consulta pública de mercado automaticamente. Para maior estabilidade, você também pode informar um token da <b>brapi.dev</b>; ele fica salvo somente neste navegador.</div><div class="field" style="margin-top:12px"><label>TOKEN BRAPI (OPCIONAL)</label><input id="brapiToken" type="password" placeholder="Cole o token, se tiver"></div><div class="actions" style="margin-top:10px"><button id="btnSalvarToken" class="btn btn-dark">Salvar token</button><button id="btnLimparToken" class="btn btn-soft">Remover token</button></div><div class="statusline" style="margin-top:14px"><span id="marketDot" class="dot"></span><span id="marketText">Aguardando consulta.</span></div></div>
+<div class="card">
+<h2>Ativos monitorados</h2>
+<form id="formAtivo" class="form-grid" style="grid-template-columns:repeat(2,1fr)">
+<input id="ativoId" type="hidden">
+<input id="ativoTickerOriginal" type="hidden">
+<div class="field">
+<label>TICKER</label>
+<input id="ativoTicker" type="text" maxlength="18" required placeholder="Ex.: PETR4">
 </div>
-<div class="card" style="margin-top:14px"><h2>Saldo inicial da planilha</h2><div class="notice">Foi importado apenas o saldo efetivamente preenchido no arquivo: <b>CCCC3 • 556 unidades • R$ 19.556,60</b>. As linhas zeradas não foram transformadas em compras ou vendas.</div><form id="formInicial" class="form-grid" style="margin-top:12px"><input id="iniId" type="hidden"><div class="field"><label>DATA BASE</label><input id="iniData" type="date" required></div><div class="field"><label>ATIVO</label><select id="iniTicker" required></select></div><div class="field"><label>QUANTIDADE</label><input id="iniQtd" type="number" step="0.000001" min="0.000001" required></div><div class="field"><label>PREÇO MÉDIO</label><input id="iniPreco" type="number" step="0.000001" min="0" required></div><div class="field"><label>VALOR TOTAL</label><input id="iniTotal" type="number" step="0.01" min="0" required></div><div class="actions"><button class="btn btn-primary">Salvar saldo</button><button type="button" id="btnCancelarInicial" class="btn btn-danger hidden">Cancelar</button></div></form><div id="tabelaIniciais" style="margin-top:14px"></div></div>
+<div class="field">
+<label>CATEGORIA</label>
+<select id="ativoCategoria">
+<option>ACAO</option>
+<option>FII</option>
+<option>ETF</option>
+<option>BDR</option>
+<option>OUTRO</option>
+</select>
+</div>
+<div class="field span-2">
+<label>NOME / DESCRIÇÃO</label>
+<input id="ativoNome" type="text" placeholder="Opcional">
+</div>
+<div class="actions span-2">
+<button class="btn btn-primary">Salvar ativo</button>
+<button type="button" id="btnCancelarAtivo" class="btn btn-danger hidden">Cancelar edição</button>
+</div>
+</form>
+<div id="tabelaAtivos" style="margin-top:14px"></div>
+</div>
+<div class="card">
+<h2>Cotação online</h2>
+<div class="notice info">O painel consulta automaticamente as cotações por meio da função protegida do Supabase. Para contingência, também é possível informar um token da <b>brapi.dev</b>; ele permanece salvo apenas neste navegador.</div>
+<div class="field" style="margin-top:12px">
+<label>TOKEN BRAPI (OPCIONAL)</label>
+<input id="brapiToken" type="password" placeholder="Cole o token, se tiver">
+</div>
+<div class="actions" style="margin-top:10px">
+<button id="btnSalvarToken" class="btn btn-dark">Salvar token</button>
+<button id="btnLimparToken" class="btn btn-soft">Remover token</button>
+</div>
+<div class="statusline" style="margin-top:14px">
+<span id="marketDot" class="dot"></span>
+<span id="marketText">Aguardando consulta.</span>
+</div>
+</div>
+</div>
+<div class="card" style="margin-top:14px">
+<h2>Saldo inicial da planilha</h2>
+<div class="notice">Foi importado apenas o saldo efetivamente preenchido no arquivo: <b>CCCC3 • 556 unidades • R$ 19.556,60</b>. As linhas zeradas não foram transformadas em compras ou vendas.</div>
+<form id="formInicial" class="form-grid" style="margin-top:12px">
+<input id="iniId" type="hidden">
+<div class="field">
+<label>DATA BASE</label>
+<input id="iniData" type="date" required>
+</div>
+<div class="field">
+<label>ATIVO</label>
+<select id="iniTicker" required></select>
+</div>
+<div class="field">
+<label>QUANTIDADE</label>
+<input id="iniQtd" type="number" step="0.000001" min="0.000001" required>
+</div>
+<div class="field">
+<label>PREÇO MÉDIO</label>
+<input id="iniPreco" type="number" step="0.000001" min="0" required>
+</div>
+<div class="field">
+<label>VALOR TOTAL</label>
+<input id="iniTotal" type="number" step="0.01" min="0" required>
+</div>
+<div class="actions">
+<button class="btn btn-primary">Salvar saldo</button>
+<button type="button" id="btnCancelarInicial" class="btn btn-danger hidden">Cancelar</button>
+</div>
+</form>
+<div id="tabelaIniciais" style="margin-top:14px"></div>
+</div>
 </section>
 <div class="footer">Painel de acompanhamento patrimonial e gerencial. Os sinais de mercado são regras técnicas automatizadas e não representam recomendação de compra ou venda. Cotações podem ter atraso conforme a fonte.</div>
 </main>
 </div>
 <div id="flash" class="flash"></div>
-<script src="acoes-leonardo.js?v=20260824-1"></script>
+<script src="acoes-leonardo.js?v=20260824-2"></script>
 </body>
 </html>
