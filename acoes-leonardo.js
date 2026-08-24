@@ -1,8 +1,8 @@
 'use strict';
-const SUPABASE_URL='https://zvtzbiqfwhggysiuiuxh.supabase.co';
-const SUPABASE_KEY='sb_publishable_6rUNIHwItIcgG_HLyTfOxA_bKACJEQt';
+const SUPABASE_URL='https://xfchbsidhcbusedkrxsi.supabase.co';
+const SUPABASE_KEY='sb_publishable_HYCggXoLPeCPOTng9teaMg_Aj1kFw8D';
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-const STATE={user:null,ativos:[],iniciais:[],operacoes:[],proventos:[],quotes:{},portfolio:[],charts:{carteira:null,resultado:null},refreshTimer:null};
+const STATE={user:null,ativos:[],iniciais:[],operacoes:[],proventos:[],quotes:{},portfolio:[],charts:{carteira:null,resultado:null},refreshTimer:null,authReady:false};
 const $=id=>document.getElementById(id);
 const brl=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v)||0);
 const num=(v,d=2)=>new Intl.NumberFormat('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(Number(v)||0);
@@ -11,66 +11,2127 @@ const dateBR=v=>{if(!v)return'—';const s=String(v).slice(0,10).split('-');retu
 const today=()=>new Date().toISOString().slice(0,10);
 const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const n=v=>{const x=Number(v);return Number.isFinite(x)?x:0};
-function flash(msg,type=''){const el=$('flash');el.textContent=msg;el.className=`flash show ${type}`;clearTimeout(el._t);el._t=setTimeout(()=>el.className='flash',3600)}
-function setLoading(on){$('appShell')?.classList.toggle('loading',on)}
-function tone(el,v){el.classList.remove('positive','negative','neutral');el.classList.add(v>0?'positive':v<0?'negative':'neutral')}
-function avg(arr){const a=arr.filter(Number.isFinite);return a.length?a.reduce((x,y)=>x+y,0)/a.length:0}
-function tickerUpper(v){return String(v||'').trim().toUpperCase().replace(/\s+/g,'')}
-function marketTicker(t){t=tickerUpper(t);if(!t)return'';if(t.includes('.')||t.startsWith('^'))return t;return`${t}.SA`}
-function priceOf(t){return STATE.quotes[tickerUpper(t)]?.price??null}
-function optionAtivos(includeBlank=false){const items=STATE.ativos.filter(a=>a.ativo!==false).sort((a,b)=>a.ticker.localeCompare(b.ticker));return`${includeBlank?'<option value="">GERAL / SEM ATIVO</option>':''}${items.map(a=>`<option value="${esc(a.ticker)}">${esc(a.ticker)}${a.nome?` • ${esc(a.nome)}`:''}</option>`).join('')}`}
-function syncSelects(){['opTicker','iniTicker'].forEach(id=>{const el=$(id);if(el){const old=el.value;el.innerHTML=optionAtivos();if([...el.options].some(o=>o.value===old))el.value=old}});const p=$('provTicker');if(p){const old=p.value;p.innerHTML=optionAtivos(true);if([...p.options].some(o=>o.value===old))p.value=old}}
-async function authInit(){const{data:{session}}=await sb.auth.getSession();if(session?.user)await onLogin(session.user);else showAuth();sb.auth.onAuthStateChange(async(event,session)=>{if(event==='SIGNED_OUT')showAuth();if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&session?.user&&STATE.user?.id!==session.user.id)await onLogin(session.user)})}
-function showAuth(){STATE.user=null;$('authShell').classList.remove('hidden');$('appShell').classList.add('hidden')}
-async function onLogin(user){STATE.user=user;$('userEmail').textContent=user.email||'Usuário';$('authShell').classList.add('hidden');$('appShell').classList.remove('hidden');await sb.rpc('leonardo_acoes_inicializar');await carregarTudo();startRefresh()}
-async function entrar(){const email=$('authEmail').value.trim(),password=$('authPassword').value;if(!email||!password)return flash('Informe e-mail e senha.','error');const{error}=await sb.auth.signInWithPassword({email,password});if(error)flash(error.message,'error')}
-async function criarConta(){const email=$('authEmail').value.trim(),password=$('authPassword').value;if(!email||password.length<6)return flash('Informe um e-mail e uma senha com pelo menos 6 caracteres.','error');const{data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:location.href.split('#')[0]}});if(error)return flash(error.message,'error');if(data.session)flash('Acesso criado e conectado.','success');else{$('authMsg').textContent='Conta criada. Confirme o e-mail, se o projeto exigir confirmação, e depois clique em Entrar.';flash('Conta criada. Verifique seu e-mail.','success')}}
-async function carregarTudo(){setLoading(true);try{const[a,i,o,p]=await Promise.all([sb.from('leonardo_acoes_ativos').select('*').order('ticker'),sb.from('leonardo_acoes_posicoes_iniciais').select('*').order('data_base'),sb.from('leonardo_acoes_operacoes').select('*').order('data',{ascending:true}).order('criado_em',{ascending:true}),sb.from('leonardo_acoes_proventos').select('*').order('data',{ascending:false})]);for(const r of[a,i,o,p])if(r.error)throw r.error;STATE.ativos=a.data||[];STATE.iniciais=i.data||[];STATE.operacoes=o.data||[];STATE.proventos=p.data||[];syncSelects();calcularPortfolio();renderAll();await atualizarCotacoes(false)}catch(e){console.error(e);flash(`Erro ao carregar: ${e.message}`,'error')}finally{setLoading(false)}}
-function calcularPortfolio(){const map={};const get=t=>map[t]||(map[t]={ticker:t,qty:0,avg:0,realized:0,totalBought:0,totalSold:0});for(const x of STATE.iniciais){const s=get(tickerUpper(x.ticker));const q=n(x.quantidade),total=n(x.valor_total)||q*n(x.preco_medio);if(q>0){const cost=s.qty*s.avg+total;s.qty+=q;s.avg=s.qty?cost/s.qty:0;s.totalBought+=total}}const ops=[...STATE.operacoes].sort((a,b)=>`${a.data}${a.criado_em||''}`.localeCompare(`${b.data}${b.criado_em||''}`));for(const x of ops){const s=get(tickerUpper(x.ticker)),q=n(x.quantidade),p=n(x.preco_unitario),fees=n(x.taxas);if(x.tipo==='COMPRA'){const total=q*p+fees;const cost=s.qty*s.avg+total;s.qty+=q;s.avg=s.qty?cost/s.qty:0;s.totalBought+=total}else{const sold=Math.min(q,Math.max(0,s.qty));const proceeds=sold*p-fees;s.realized+=proceeds-sold*s.avg;s.qty-=sold;s.totalSold+=proceeds;if(s.qty<=1e-9){s.qty=0;s.avg=0}}}STATE.portfolio=Object.values(map).map(s=>{const quote=priceOf(s.ticker),invested=s.qty*s.avg,current=quote===null?null:s.qty*quote,unrealized=current===null?null:current-invested;return{...s,quote,invested,current,unrealized,returnPct:invested>0&&current!==null?unrealized/invested:null,market:STATE.quotes[s.ticker]||null}}).sort((a,b)=>b.invested-a.invested)}
-function validarCarteira(ops){const qty={};for(const x of STATE.iniciais)qty[tickerUpper(x.ticker)]=(qty[tickerUpper(x.ticker)]||0)+n(x.quantidade);for(const x of [...ops].sort((a,b)=>`${a.data}${a.criado_em||''}`.localeCompare(`${b.data}${b.criado_em||''}`))){const t=tickerUpper(x.ticker);qty[t]=qty[t]||0;if(x.tipo==='COMPRA')qty[t]+=n(x.quantidade);else qty[t]-=n(x.quantidade);if(qty[t]<-1e-8)return{ok:false,ticker:t,data:x.data}}return{ok:true}}
-function totals(){const invested=STATE.portfolio.reduce((s,x)=>s+x.invested,0);const current=STATE.portfolio.reduce((s,x)=>s+(x.current===null?x.invested:x.current),0);const unrealized=STATE.portfolio.reduce((s,x)=>s+(x.unrealized||0),0);const realized=STATE.portfolio.reduce((s,x)=>s+x.realized,0);const proventos=STATE.proventos.reduce((s,x)=>s+n(x.valor),0);return{invested,current,unrealized,realized,proventos,total:unrealized+realized+proventos}}
-function renderAll(){calcularPortfolio();renderKpis();renderCarteira();renderOperacoes();renderProventos();renderAtivos();renderIniciais();renderInsights();renderGraficos();renderUltimas()}
-function renderKpis(){const t=totals();$('kpiInvestido').textContent=brl(t.invested);$('kpiAtual').textContent=brl(t.current);$('kpiAberto').textContent=brl(t.unrealized);$('kpiAbertoPct').textContent=t.invested?pct(t.unrealized/t.invested):'0,00%';$('kpiRealizado').textContent=brl(t.realized);$('kpiProventos').textContent=brl(t.proventos);$('kpiTotal').textContent=brl(t.total);tone($('kpiAberto'),t.unrealized);tone($('kpiAbertoPct'),t.unrealized);tone($('kpiRealizado'),t.realized);tone($('kpiTotal'),t.total)}
-function signalFor(q){if(!q||!q.price||!q.history?.length)return{label:'SEM COTAÇÃO',cls:'signal-none',why:'Ticker ainda não localizado na fonte online.'};const h=q.history.map(x=>x.close).filter(Number.isFinite),p=q.price;if(h.length<5)return{label:'DADOS INSUFICIENTES',cls:'signal-none',why:'Histórico curto para calcular o sinal.'};const last5=h.slice(-5),last20=h.slice(-20),ma5=avg(last5),ma20=avg(last20),week=h.length>=6?p/h[h.length-6]-1:0,month=h.length>=21?p/h[h.length-21]-1:0,high20=Math.max(...last20),low20=Math.min(...last20),vol=avg(last5.slice(1).map((x,i)=>Math.abs(x/last5[i]-1)));let score=0;const reasons=[];if(p>ma5&&ma5>ma20){score+=2;reasons.push('preço acima das médias de 5 e 20 pregões')}if(p<ma5&&ma5<ma20){score-=2;reasons.push('preço abaixo das médias de 5 e 20 pregões')}if(week>0&&week<.06){score+=1;reasons.push('semana positiva sem forte esticamento')}if(week>0.08){score-=1;reasons.push('alta semanal forte, com risco de realização')}if(week<-.06){score-=1;reasons.push('queda semanal relevante')}if(p>ma20&&p<high20*.98&&week>=0){score+=1;reasons.push('tendência positiva sem estar na máxima recente')}if(p<ma20&&p>low20*1.03&&week>0){score+=1;reasons.push('tentativa de recuperação')}let out;if(score>=3)out={label:'COMPRA TÉCNICA',cls:'signal-buy'};else if(score>=1)out={label:'MANTER / OBSERVAR',cls:'signal-hold'};else if(score<=-3)out={label:'VENDA / REDUZIR',cls:'signal-sell'};else if(score<=-1)out={label:'CAUTELA',cls:'signal-warn'};else out={label:'NEUTRO',cls:'signal-none'};return{...out,score,week,month,ma5,ma20,vol,why:reasons.slice(0,3).join('; ')||'Sem tendência técnica clara.'}}
-function renderCarteira(){const rows=STATE.portfolio.filter(x=>x.qty>0||Math.abs(x.realized)>0);if(!rows.length){$('tabelaCarteira').innerHTML='<div class="empty">Nenhuma posição registrada.</div>';return}let html='<div class="table-wrap"><table class="table"><thead><tr><th>Ativo</th><th>Qtd.</th><th>Preço médio</th><th>Cotação</th><th>Investido</th><th>Valor atual</th><th>Resultado aberto</th><th>Realizado</th><th>Semana</th><th>Sinal</th></tr></thead><tbody>';for(const x of rows){const s=signalFor(x.market);html+=`<tr><td class="ticker">${esc(x.ticker)}</td><td>${num(x.qty,4)}</td><td>${brl(x.avg)}</td><td class="price-badge">${x.quote===null?'—':brl(x.quote)}</td><td>${brl(x.invested)}</td><td>${x.current===null?'—':brl(x.current)}</td><td class="${(x.unrealized||0)>=0?'positive':'negative'}">${x.unrealized===null?'—':`${brl(x.unrealized)} • ${pct(x.returnPct||0)}`}</td><td class="${x.realized>=0?'positive':'negative'}">${brl(x.realized)}</td><td class="${(s.week||0)>=0?'positive':'negative'}">${s.week===undefined?'—':pct(s.week)}</td><td><span class="signal ${s.cls}">${s.label}</span></td></tr>`}html+='</tbody></table></div>';$('tabelaCarteira').innerHTML=html}
-function renderOperacoes(){const data=[...STATE.operacoes].sort((a,b)=>`${b.data}${b.criado_em||''}`.localeCompare(`${a.data}${a.criado_em||''}`));if(!data.length){$('tabelaOperacoes').innerHTML='<div class="empty">Nenhuma compra ou venda registrada.</div>';return}let html='<div class="table-wrap"><table class="table"><thead><tr><th>Data</th><th>Tipo</th><th>Ativo</th><th>Qtd.</th><th>Preço</th><th>Taxas</th><th>Total</th><th>Observação</th><th></th></tr></thead><tbody>';for(const x of data){const total=n(x.quantidade)*n(x.preco_unitario)+(x.tipo==='COMPRA'?n(x.taxas):-n(x.taxas));html+=`<tr><td>${dateBR(x.data)}</td><td><span class="signal ${x.tipo==='COMPRA'?'signal-buy':'signal-sell'}">${x.tipo}</span></td><td class="ticker">${esc(x.ticker)}</td><td>${num(x.quantidade,4)}</td><td>${brl(x.preco_unitario)}</td><td>${brl(x.taxas)}</td><td>${brl(total)}</td><td>${esc(x.observacao||'')}</td><td><div class="toolbar"><button class="btn btn-soft btn-small" onclick="editarOperacao('${x.id}')">Editar</button><button class="btn btn-danger btn-small" onclick="excluirOperacao('${x.id}')">Excluir</button></div></td></tr>`}html+='</tbody></table></div>';$('tabelaOperacoes').innerHTML=html}
-function renderUltimas(){const d=[...STATE.operacoes].sort((a,b)=>`${b.data}${b.criado_em||''}`.localeCompare(`${a.data}${a.criado_em||''}`)).slice(0,7);if(!d.length){$('ultimasOperacoes').innerHTML='<div class="empty">Sem operações.</div>';return}$('ultimasOperacoes').innerHTML='<div class="table-wrap"><table class="table" style="min-width:560px"><thead><tr><th>Data</th><th>Tipo</th><th>Ativo</th><th>Qtd.</th><th>Preço</th></tr></thead><tbody>'+d.map(x=>`<tr><td>${dateBR(x.data)}</td><td>${x.tipo}</td><td class="ticker">${esc(x.ticker)}</td><td>${num(x.quantidade,2)}</td><td>${brl(x.preco_unitario)}</td></tr>`).join('')+'</tbody></table></div>'}
-function renderProventos(){const total=STATE.proventos.reduce((s,x)=>s+n(x.valor),0),year=String(new Date().getFullYear()),ano=STATE.proventos.filter(x=>String(x.data).startsWith(year)).reduce((s,x)=>s+n(x.valor),0);$('provTotal').textContent=brl(total);$('provAno').textContent=brl(ano);if(!STATE.proventos.length){$('tabelaProventos').innerHTML='<div class="empty">Nenhum provento registrado.</div>';return}let html='<div class="table-wrap"><table class="table"><thead><tr><th>Data</th><th>Ativo</th><th>Tipo</th><th>Valor</th><th>Observação</th><th></th></tr></thead><tbody>';for(const x of STATE.proventos){html+=`<tr><td>${dateBR(x.data)}</td><td class="ticker">${esc(x.ticker||'—')}</td><td>${esc(x.tipo_renda)}</td><td class="positive">${brl(x.valor)}</td><td>${esc(x.observacao||'')}</td><td><div class="toolbar"><button class="btn btn-soft btn-small" onclick="editarProvento('${x.id}')">Editar</button><button class="btn btn-danger btn-small" onclick="excluirProvento('${x.id}')">Excluir</button></div></td></tr>`}html+='</tbody></table></div>';$('tabelaProventos').innerHTML=html}
-function renderAtivos(){if(!STATE.ativos.length){$('tabelaAtivos').innerHTML='<div class="empty">Nenhum ativo cadastrado.</div>';return}let html='<div class="table-wrap"><table class="table" style="min-width:620px"><thead><tr><th>Ticker</th><th>Categoria</th><th>Nome</th><th>Cotação</th><th></th></tr></thead><tbody>';for(const x of STATE.ativos){html+=`<tr><td class="ticker">${esc(x.ticker)}</td><td>${esc(x.categoria)}</td><td>${esc(x.nome||'')}</td><td>${priceOf(x.ticker)===null?'—':brl(priceOf(x.ticker))}</td><td><div class="toolbar"><button class="btn btn-soft btn-small" onclick="editarAtivo('${x.id}')">Editar</button><button class="btn btn-danger btn-small" onclick="excluirAtivo('${x.id}')">Excluir</button></div></td></tr>`}html+='</tbody></table></div>';$('tabelaAtivos').innerHTML=html}
-function renderIniciais(){if(!STATE.iniciais.length){$('tabelaIniciais').innerHTML='<div class="empty">Nenhum saldo inicial.</div>';return}let html='<div class="table-wrap"><table class="table"><thead><tr><th>Data base</th><th>Ativo</th><th>Qtd.</th><th>Preço médio</th><th>Total</th><th>Origem</th><th></th></tr></thead><tbody>';for(const x of STATE.iniciais){html+=`<tr><td>${dateBR(x.data_base)}</td><td class="ticker">${esc(x.ticker)}</td><td>${num(x.quantidade,4)}</td><td>${brl(x.preco_medio)}</td><td>${brl(x.valor_total)}</td><td>${esc(x.origem)}</td><td><div class="toolbar"><button class="btn btn-soft btn-small" onclick="editarInicial('${x.id}')">Editar</button><button class="btn btn-danger btn-small" onclick="excluirInicial('${x.id}')">Excluir</button></div></td></tr>`}html+='</tbody></table></div>';$('tabelaIniciais').innerHTML=html}
-function renderInsights(){const ativos=STATE.ativos.map(a=>({ticker:a.ticker,q:STATE.quotes[a.ticker],s:signalFor(STATE.quotes[a.ticker])}));if(!ativos.length){$('insights').innerHTML='<div class="empty">Sem ativos.</div>';return}$('insights').innerHTML=ativos.map(x=>`<div class="insight"><div class="insight-top"><div><div class="ticker">${esc(x.ticker)}</div><div class="muted tiny">${x.q?.price?brl(x.q.price):'Cotação indisponível'}</div></div><span class="signal ${x.s.cls}">${x.s.label}</span></div><div class="metrics"><div class="metric"><span>Semana</span><b class="${(x.s.week||0)>=0?'positive':'negative'}">${x.s.week===undefined?'—':pct(x.s.week)}</b></div><div class="metric"><span>20 pregões</span><b class="${(x.s.month||0)>=0?'positive':'negative'}">${x.s.month===undefined?'—':pct(x.s.month)}</b></div><div class="metric"><span>Vol. 5d</span><b>${x.s.vol===undefined?'—':pct(x.s.vol)}</b></div></div><div class="tiny muted" style="margin-top:9px;line-height:1.45">${esc(x.s.why)}</div></div>`).join('')}
-function renderGraficos(){if(typeof Chart==='undefined')return;const open=STATE.portfolio.filter(x=>x.qty>0);if(STATE.charts.carteira)STATE.charts.carteira.destroy();STATE.charts.carteira=new Chart($('grafCarteira'),{type:'bar',data:{labels:open.map(x=>x.ticker),datasets:[{label:'Preço médio',data:open.map(x=>x.avg)},{label:'Cotação',data:open.map(x=>x.quote??x.avg)}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${brl(c.raw)}`}}},scales:{y:{ticks:{callback:v=>`R$ ${num(v,0)}`}}}}});const result=STATE.portfolio.filter(x=>x.qty>0||x.realized);if(STATE.charts.resultado)STATE.charts.resultado.destroy();STATE.charts.resultado=new Chart($('grafResultado'),{type:'bar',data:{labels:result.map(x=>x.ticker),datasets:[{label:'Resultado aberto',data:result.map(x=>x.unrealized||0)},{label:'Resultado realizado',data:result.map(x=>x.realized)}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${brl(c.raw)}`}}},scales:{y:{ticks:{callback:v=>`R$ ${num(v,0)}`}}}}})}
-async function fetchQuoteBrapi(ticker,token){const u=`https://brapi.dev/api/quote/${encodeURIComponent(ticker)}?range=3mo&interval=1d&fundamental=false&dividends=false`;const r=await fetch(u,{headers:{Authorization:`Bearer ${token}`}});if(!r.ok)throw new Error(`BRAPI ${r.status}`);const j=await r.json(),x=j.results?.[0];if(!x)throw new Error('Ativo não encontrado');const hist=(x.historicalDataPrice||[]).filter(h=>h.close!=null).map(h=>({ts:h.date*1000,close:Number(h.close)}));return{ticker,price:Number(x.regularMarketPrice),changePct:Number(x.regularMarketChangePercent||0)/100,history:hist,name:x.longName||x.shortName||ticker,source:'BRAPI',asOf:x.regularMarketTime?x.regularMarketTime*1000:Date.now()}}
-async function fetchQuotesEdge(tickers){const{data,error}=await sb.functions.invoke('leonardo-cotacoes',{body:{tickers}});if(error)throw error;if(data?.error)throw new Error(data.error);return data||{results:[],errors:[]}}
-async function atualizarCotacoes(show=true){if(!STATE.user)return;if(show)setLoading(true);$('quoteStatus').textContent='COTAÇÃO: atualizando...';$('marketDot').className='dot';$('marketText').textContent='Consultando mercado...';const tickers=[...new Set(STATE.ativos.filter(a=>a.ativo!==false).map(a=>a.ticker))];let ok=0,fail=0,source='';try{const edge=await fetchQuotesEdge(tickers);for(const q of(edge.results||[])){STATE.quotes[tickerUpper(q.ticker)]=q;ok++}fail=(edge.errors||[]).length;source=ok?'SUPABASE/YAHOO':'';if(fail&&localStorage.getItem('leonardo_brapi_token')){const token=localStorage.getItem('leonardo_brapi_token');const faltantes=(edge.errors||[]).map(x=>x.ticker);const backup=await Promise.allSettled(faltantes.map(async t=>[t,await fetchQuoteBrapi(t,token)]));for(const r of backup){if(r.status==='fulfilled'){const[t,q]=r.value;STATE.quotes[tickerUpper(t)]=q;ok++;fail=Math.max(0,fail-1);source=source?`${source}+BRAPI`:'BRAPI'}}}}catch(e){console.warn('Edge de cotação indisponível',e);const token=localStorage.getItem('leonardo_brapi_token');if(token){const backup=await Promise.allSettled(tickers.map(async t=>[t,await fetchQuoteBrapi(t,token)]));for(const r of backup){if(r.status==='fulfilled'){const[t,q]=r.value;STATE.quotes[tickerUpper(t)]=q;ok++}else fail++}source=ok?'BRAPI':''}else fail=tickers.length}calcularPortfolio();renderKpis();renderCarteira();renderAtivos();renderInsights();renderGraficos();if(ok){$('quoteStatus').textContent=`COTAÇÃO: ${ok}/${tickers.length} • ${source}`;$('marketDot').className='dot ok';$('marketText').textContent=`${ok} ativo(s) atualizado(s). ${fail?`${fail} sem cotação. `:''}Fonte: ${source}.`;}else{$('quoteStatus').textContent='COTAÇÃO: indisponível';$('marketDot').className='dot err';$('marketText').textContent='Nenhum ticker foi localizado. Se os códigos estiverem anonimizados, renomeie-os para os tickers reais.'}if(show){setLoading(false);flash(ok?'Cotações atualizadas.':'Não foi possível atualizar as cotações.',ok?'success':'error')}}
-function startRefresh(){clearInterval(STATE.refreshTimer);STATE.refreshTimer=setInterval(()=>atualizarCotacoes(false),300000)}
-async function saveOperacao(e){e.preventDefault();const id=$('opId').value;const row={user_id:STATE.user.id,data:$('opData').value,tipo:$('opTipo').value,ticker:tickerUpper($('opTicker').value),quantidade:n($('opQtd').value),preco_unitario:n($('opPreco').value),taxas:n($('opTaxas').value),observacao:$('opObs').value.trim()||null};if(!row.data||!row.ticker||row.quantidade<=0||row.preco_unitario<0)return flash('Preencha os campos obrigatórios.','error');const candidate=STATE.operacoes.filter(x=>x.id!==id).concat({...row,id:id||'novo',criado_em:id?(STATE.operacoes.find(x=>x.id===id)?.criado_em||''):new Date().toISOString()});const valid=validarCarteira(candidate);if(!valid.ok)return flash(`Venda maior que a posição disponível em ${valid.ticker} na data ${dateBR(valid.data)}.`,'error');const q=id?sb.from('leonardo_acoes_operacoes').update({...row,atualizado_em:new Date().toISOString()}).eq('id',id):sb.from('leonardo_acoes_operacoes').insert(row);const{error}=await q;if(error)return flash(error.message,'error');resetOperacao();await carregarTudo();flash('Operação salva.','success')}
-function editarOperacao(id){const x=STATE.operacoes.find(v=>v.id===id);if(!x)return;showPage('operacoes');$('opId').value=x.id;$('opData').value=x.data;$('opTipo').value=x.tipo;$('opTicker').value=x.ticker;$('opQtd').value=x.quantidade;$('opPreco').value=x.preco_unitario;$('opTaxas').value=x.taxas;$('opObs').value=x.observacao||'';$('btnCancelarOperacao').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'})}
-function resetOperacao(){$('formOperacao').reset();$('opId').value='';$('opData').value=today();$('opTaxas').value='0';$('btnCancelarOperacao').classList.add('hidden');syncSelects()}
-async function excluirOperacao(id){if(!confirm('Excluir esta operação?'))return;const{error}=await sb.from('leonardo_acoes_operacoes').delete().eq('id',id);if(error)return flash(error.message,'error');await carregarTudo();flash('Operação excluída.','success')}
-async function saveProvento(e){e.preventDefault();const id=$('provId').value,row={user_id:STATE.user.id,data:$('provData').value,ticker:$('provTicker').value||null,tipo_renda:$('provTipo').value,valor:n($('provValor').value),observacao:$('provObs').value.trim()||null};if(!row.data||row.valor<0)return flash('Preencha os dados do provento.','error');const q=id?sb.from('leonardo_acoes_proventos').update(row).eq('id',id):sb.from('leonardo_acoes_proventos').insert(row),{error}=await q;if(error)return flash(error.message,'error');resetProvento();await carregarTudo();flash('Provento salvo.','success')}
-function editarProvento(id){const x=STATE.proventos.find(v=>v.id===id);if(!x)return;showPage('proventos');$('provId').value=x.id;$('provData').value=x.data;$('provTicker').value=x.ticker||'';$('provTipo').value=x.tipo_renda;$('provValor').value=x.valor;$('provObs').value=x.observacao||'';$('btnCancelarProv').classList.remove('hidden')}
-function resetProvento(){$('formProvento').reset();$('provId').value='';$('provData').value=today();$('btnCancelarProv').classList.add('hidden');syncSelects()}
-async function excluirProvento(id){if(!confirm('Excluir este provento?'))return;const{error}=await sb.from('leonardo_acoes_proventos').delete().eq('id',id);if(error)return flash(error.message,'error');await carregarTudo();flash('Provento excluído.','success')}
-async function saveAtivo(e){e.preventDefault();const id=$('ativoId').value,old=tickerUpper($('ativoTickerOriginal').value),ticker=tickerUpper($('ativoTicker').value),row={user_id:STATE.user.id,ticker,nome:$('ativoNome').value.trim()||ticker,categoria:$('ativoCategoria').value,ativo:true,atualizado_em:new Date().toISOString()};if(!ticker)return flash('Informe o ticker.','error');if(id&&old&&old!==ticker){const dup=STATE.ativos.some(a=>a.ticker===ticker&&a.id!==id);if(dup)return flash('Esse ticker já está cadastrado.','error');const updates=[sb.from('leonardo_acoes_posicoes_iniciais').update({ticker}).eq('ticker',old),sb.from('leonardo_acoes_operacoes').update({ticker,atualizado_em:new Date().toISOString()}).eq('ticker',old),sb.from('leonardo_acoes_proventos').update({ticker}).eq('ticker',old)];for(const p of updates){const r=await p;if(r.error)return flash(`Não foi possível renomear: ${r.error.message}`,'error')}}const q=id?sb.from('leonardo_acoes_ativos').update(row).eq('id',id):sb.from('leonardo_acoes_ativos').insert({...row,origem:'manual'}),{error}=await q;if(error)return flash(error.message,'error');resetAtivo();STATE.quotes={};await carregarTudo();flash(old&&old!==ticker?`Ticker alterado de ${old} para ${ticker}.`:'Ativo salvo.','success')}
-function editarAtivo(id){const x=STATE.ativos.find(v=>v.id===id);if(!x)return;showPage('ativos');$('ativoId').value=x.id;$('ativoTickerOriginal').value=x.ticker;$('ativoTicker').value=x.ticker;$('ativoNome').value=x.nome||'';$('ativoCategoria').value=x.categoria;$('btnCancelarAtivo').classList.remove('hidden')}
-function resetAtivo(){$('formAtivo').reset();$('ativoId').value='';$('ativoTickerOriginal').value='';$('btnCancelarAtivo').classList.add('hidden')}
-async function excluirAtivo(id){const a=STATE.ativos.find(x=>x.id===id);if(!a)return;const used=STATE.operacoes.some(x=>x.ticker===a.ticker)||STATE.iniciais.some(x=>x.ticker===a.ticker)||STATE.proventos.some(x=>x.ticker===a.ticker);if(used)return flash('Este ativo possui saldo, operação ou provento. Renomeie-o em vez de excluir.','error');if(!confirm(`Excluir ${a.ticker}?`))return;const{error}=await sb.from('leonardo_acoes_ativos').delete().eq('id',id);if(error)return flash(error.message,'error');await carregarTudo();flash('Ativo excluído.','success')}
-async function saveInicial(e){e.preventDefault();const id=$('iniId').value,row={user_id:STATE.user.id,data_base:$('iniData').value,ticker:tickerUpper($('iniTicker').value),quantidade:n($('iniQtd').value),preco_medio:n($('iniPreco').value),valor_total:n($('iniTotal').value),observacao:'Saldo inicial / posição anterior',origem:id?(STATE.iniciais.find(x=>x.id===id)?.origem||'manual'):'manual'};if(!row.data_base||!row.ticker||row.quantidade<=0)return flash('Preencha o saldo inicial.','error');const q=id?sb.from('leonardo_acoes_posicoes_iniciais').update(row).eq('id',id):sb.from('leonardo_acoes_posicoes_iniciais').insert(row),{error}=await q;if(error)return flash(error.message,'error');resetInicial();await carregarTudo();flash('Saldo inicial salvo.','success')}
-function editarInicial(id){const x=STATE.iniciais.find(v=>v.id===id);if(!x)return;showPage('ativos');$('iniId').value=x.id;$('iniData').value=x.data_base;$('iniTicker').value=x.ticker;$('iniQtd').value=x.quantidade;$('iniPreco').value=x.preco_medio;$('iniTotal').value=x.valor_total;$('btnCancelarInicial').classList.remove('hidden')}
-function resetInicial(){$('formInicial').reset();$('iniId').value='';$('iniData').value='2025-12-31';$('btnCancelarInicial').classList.add('hidden');syncSelects()}
-async function excluirInicial(id){if(!confirm('Excluir este saldo inicial?'))return;const{error}=await sb.from('leonardo_acoes_posicoes_iniciais').delete().eq('id',id);if(error)return flash(error.message,'error');await carregarTudo();flash('Saldo inicial excluído.','success')}
-function useCurrentQuote(){const t=$('opTicker').value,p=priceOf(t);if(p===null)return flash('Cotação atual indisponível para este ticker.','error');$('opPreco').value=p;flash(`Cotação de ${t}: ${brl(p)}`,'success')}
-function exportCsv(){const head=['data','tipo','ticker','quantidade','preco_unitario','taxas','total','observacao'];const lines=[head.join(';'),...STATE.operacoes.map(x=>[x.data,x.tipo,x.ticker,x.quantidade,x.preco_unitario,x.taxas,n(x.quantidade)*n(x.preco_unitario)+(x.tipo==='COMPRA'?n(x.taxas):-n(x.taxas)),`"${String(x.observacao||'').replaceAll('"','""')}"`].join(';'))];const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`acoes-leonardo-operacoes-${today()}.csv`;a.click();URL.revokeObjectURL(a.href)}
-function showPage(name){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===`page-${name}`));document.querySelectorAll('#navTabs button').forEach(x=>x.classList.toggle('active',x.dataset.page===name))}
-function bind(){document.querySelectorAll('#navTabs button').forEach(b=>b.onclick=()=>showPage(b.dataset.page));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>showPage(b.dataset.go));$('btnEntrar').onclick=entrar;$('btnCriarConta').onclick=criarConta;$('btnSair').onclick=()=>sb.auth.signOut();$('formOperacao').onsubmit=saveOperacao;$('btnCancelarOperacao').onclick=resetOperacao;$('btnUsarCotacao').onclick=useCurrentQuote;$('btnExportarCsv').onclick=exportCsv;$('formProvento').onsubmit=saveProvento;$('btnCancelarProv').onclick=resetProvento;$('formAtivo').onsubmit=saveAtivo;$('btnCancelarAtivo').onclick=resetAtivo;$('formInicial').onsubmit=saveInicial;$('btnCancelarInicial').onclick=resetInicial;$('btnAtualizarCotacoes').onclick=()=>atualizarCotacoes(true);$('btnAtualizarCotacoes2').onclick=()=>atualizarCotacoes(true);$('btnSalvarToken').onclick=()=>{const v=$('brapiToken').value.trim();if(v){localStorage.setItem('leonardo_brapi_token',v);flash('Token BRAPI salvo neste navegador.','success');atualizarCotacoes(true)}};$('btnLimparToken').onclick=()=>{localStorage.removeItem('leonardo_brapi_token');$('brapiToken').value='';flash('Token removido.','success')};$('iniQtd').oninput=$('iniPreco').oninput=()=>{$('iniTotal').value=(n($('iniQtd').value)*n($('iniPreco').value)).toFixed(2)};$('authPassword').addEventListener('keydown',e=>{if(e.key==='Enter')entrar()});$('opData').value=today();$('provData').value=today();$('iniData').value='2025-12-31';const token=localStorage.getItem('leonardo_brapi_token');if(token)$('brapiToken').value=token}
-window.editarOperacao=editarOperacao;
-window.excluirOperacao=excluirOperacao;
-window.editarProvento=editarProvento;
-window.excluirProvento=excluirProvento;
-window.editarAtivo=editarAtivo;
-window.excluirAtivo=excluirAtivo;
-window.editarInicial=editarInicial;
-window.excluirInicial=excluirInicial;
+
+function flash(msg,type=''){
+const el=$('flash');
+if(!el)return;
+el.textContent=msg;
+el.className=`flash show ${type}`;
+clearTimeout(el._t);
+el._t=setTimeout(()=>el.className='flash',3600);
+}
+
+function setLoading(on){
+$('appShell')?.classList.toggle('loading',on);
+}
+
+function tone(el,v){
+if(!el)return;
+el.classList.remove('positive','negative','neutral');
+el.classList.add(v>0?'positive':v<0?'negative':'neutral');
+}
+
+function avg(arr){
+const a=arr.filter(Number.isFinite);
+return a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+}
+
+function tickerUpper(v){
+return String(v||'').trim().toUpperCase().replace(/\s+/g,'');
+}
+
+function priceOf(t){
+return STATE.quotes[tickerUpper(t)]?.price??null;
+}
+
+function optionAtivos(includeBlank=false){
+const items=STATE.ativos
+.filter(a=>a.ativo!==false)
+.sort((a,b)=>a.ticker.localeCompare(b.ticker));
+return`${includeBlank?'<option value="">GERAL / SEM ATIVO</option>':''}${items.map(a=>`<option value="${esc(a.ticker)}">${esc(a.ticker)}${a.nome?` • ${esc(a.nome)}`:''}</option>`).join('')}`;
+}
+
+function syncSelects(){
+['opTicker','iniTicker'].forEach(id=>{
+const el=$(id);
+if(el){
+const old=el.value;
+el.innerHTML=optionAtivos();
+if([...el.options].some(o=>o.value===old))el.value=old;
+}
+});
+const p=$('provTicker');
+if(p){
+const old=p.value;
+p.innerHTML=optionAtivos(true);
+if([...p.options].some(o=>o.value===old))p.value=old;
+}
+}
+
+async function authInit(){
+const msg=$('authMsg');
+if(msg)msg.textContent='Iniciando acesso automático seguro...';
+try{
+const{
+data:{session},
+error:sessionError
+}=await sb.auth.getSession();
+if(sessionError)throw sessionError;
+if(session?.user){
+await onLogin(session.user);
+return;
+}
+const{data,error}=await sb.auth.signInAnonymously();
+if(error)throw error;
+if(!data?.user)throw new Error('Não foi possível criar a sessão automática.');
+await onLogin(data.user);
+}catch(e){
+console.error('Falha no acesso automático:',e);
+if(msg){
+msg.innerHTML='Não foi possível iniciar o acesso automático.<br><br>Confirme no Supabase: <b>Authentication → Sign In / Providers → Anonymous → Enable</b>.';
+}
+flash(`Acesso automático indisponível: ${e.message}`,'error');
+}
+}
+
+async function onLogin(user){
+if(!user)return;
+STATE.user=user;
+STATE.authReady=true;
+const label=$('userEmail');
+if(label)label.textContent='ACESSO AUTOMÁTICO';
+$('authShell')?.classList.add('hidden');
+$('appShell')?.classList.remove('hidden');
+
+const{error}=await sb.rpc('leonardo_acoes_inicializar');
+
+if(error){
+console.error(error);
+flash(`Erro ao inicializar carteira: ${error.message}`,'error');
+}
+
+await carregarTudo();
+startRefresh();
+}
+
+async function carregarTudo(){
+if(!STATE.user)return;
+setLoading(true);
+
+try{
+const[a,i,o,p]=await Promise.all([
+sb.from('leonardo_acoes_ativos')
+.select('*')
+.order('ticker'),
+
+sb.from('leonardo_acoes_posicoes_iniciais')
+.select('*')
+.order('data_base'),
+
+sb.from('leonardo_acoes_operacoes')
+.select('*')
+.order('data',{ascending:true})
+.order('criado_em',{ascending:true}),
+
+sb.from('leonardo_acoes_proventos')
+.select('*')
+.order('data',{ascending:false})
+]);
+
+for(const r of[a,i,o,p]){
+if(r.error)throw r.error;
+}
+
+STATE.ativos=a.data||[];
+STATE.iniciais=i.data||[];
+STATE.operacoes=o.data||[];
+STATE.proventos=p.data||[];
+
+syncSelects();
+calcularPortfolio();
+renderAll();
+
+await atualizarCotacoes(false);
+
+}catch(e){
+console.error(e);
+flash(`Erro ao carregar: ${e.message}`,'error');
+}finally{
+setLoading(false);
+}
+}
+
+function calcularPortfolio(){
+const map={};
+
+const get=t=>map[t]||(map[t]={
+ticker:t,
+qty:0,
+avg:0,
+realized:0,
+totalBought:0,
+totalSold:0
+});
+
+for(const x of STATE.iniciais){
+const s=get(tickerUpper(x.ticker));
+const q=n(x.quantidade);
+const total=n(x.valor_total)||q*n(x.preco_medio);
+
+if(q>0){
+const cost=s.qty*s.avg+total;
+s.qty+=q;
+s.avg=s.qty?cost/s.qty:0;
+s.totalBought+=total;
+}
+}
+
+const ops=[...STATE.operacoes].sort(
+(a,b)=>`${a.data}${a.criado_em||''}`.localeCompare(`${b.data}${b.criado_em||''}`)
+);
+
+for(const x of ops){
+const s=get(tickerUpper(x.ticker));
+const q=n(x.quantidade);
+const p=n(x.preco_unitario);
+const fees=n(x.taxas);
+
+if(x.tipo==='COMPRA'){
+const total=q*p+fees;
+const cost=s.qty*s.avg+total;
+s.qty+=q;
+s.avg=s.qty?cost/s.qty:0;
+s.totalBought+=total;
+}else{
+const sold=Math.min(q,Math.max(0,s.qty));
+const proceeds=sold*p-fees;
+
+s.realized+=proceeds-sold*s.avg;
+s.qty-=sold;
+s.totalSold+=proceeds;
+
+if(s.qty<=1e-9){
+s.qty=0;
+s.avg=0;
+}
+}
+}
+
+STATE.portfolio=Object.values(map)
+.map(s=>{
+const quote=priceOf(s.ticker);
+const invested=s.qty*s.avg;
+const current=quote===null?null:s.qty*quote;
+const unrealized=current===null?null:current-invested;
+
+return{
+...s,
+quote,
+invested,
+current,
+unrealized,
+returnPct:invested>0&&current!==null?unrealized/invested:null,
+market:STATE.quotes[s.ticker]||null
+};
+})
+.sort((a,b)=>b.invested-a.invested);
+}
+
+function validarCarteira(ops){
+const qty={};
+
+for(const x of STATE.iniciais){
+qty[tickerUpper(x.ticker)]=(qty[tickerUpper(x.ticker)]||0)+n(x.quantidade);
+}
+
+for(const x of [...ops].sort(
+(a,b)=>`${a.data}${a.criado_em||''}`.localeCompare(`${b.data}${b.criado_em||''}`)
+)){
+const t=tickerUpper(x.ticker);
+
+qty[t]=qty[t]||0;
+
+if(x.tipo==='COMPRA'){
+qty[t]+=n(x.quantidade);
+}else{
+qty[t]-=n(x.quantidade);
+}
+
+if(qty[t]<-1e-8){
+return{
+ok:false,
+ticker:t,
+data:x.data
+};
+}
+}
+
+return{ok:true};
+}
+
+function totals(){
+const invested=STATE.portfolio.reduce((s,x)=>s+x.invested,0);
+
+const current=STATE.portfolio.reduce(
+(s,x)=>s+(x.current===null?x.invested:x.current),
+0
+);
+
+const unrealized=STATE.portfolio.reduce(
+(s,x)=>s+(x.unrealized||0),
+0
+);
+
+const realized=STATE.portfolio.reduce(
+(s,x)=>s+x.realized,
+0
+);
+
+const proventos=STATE.proventos.reduce(
+(s,x)=>s+n(x.valor),
+0
+);
+
+return{
+invested,
+current,
+unrealized,
+realized,
+proventos,
+total:unrealized+realized+proventos
+};
+}
+
+function renderAll(){
+calcularPortfolio();
+renderKpis();
+renderCarteira();
+renderOperacoes();
+renderProventos();
+renderAtivos();
+renderIniciais();
+renderInsights();
+renderGraficos();
+renderUltimas();
+}
+
+function renderKpis(){
+const t=totals();
+
+$('kpiInvestido').textContent=brl(t.invested);
+$('kpiAtual').textContent=brl(t.current);
+$('kpiAberto').textContent=brl(t.unrealized);
+$('kpiAbertoPct').textContent=t.invested?pct(t.unrealized/t.invested):'0,00%';
+$('kpiRealizado').textContent=brl(t.realized);
+$('kpiProventos').textContent=brl(t.proventos);
+$('kpiTotal').textContent=brl(t.total);
+
+tone($('kpiAberto'),t.unrealized);
+tone($('kpiAbertoPct'),t.unrealized);
+tone($('kpiRealizado'),t.realized);
+tone($('kpiTotal'),t.total);
+}
+
+function signalFor(q){
+if(!q||!q.price||!q.history?.length){
+return{
+label:'SEM COTAÇÃO',
+cls:'signal-none',
+why:'Ticker ainda não localizado na fonte online.'
+};
+}
+
+const h=q.history
+.map(x=>x.close)
+.filter(Number.isFinite);
+
+const p=q.price;
+
+if(h.length<5){
+return{
+label:'DADOS INSUFICIENTES',
+cls:'signal-none',
+why:'Histórico curto para calcular o sinal.'
+};
+}
+
+const last5=h.slice(-5);
+const last20=h.slice(-20);
+
+const ma5=avg(last5);
+const ma20=avg(last20);
+
+const week=h.length>=6?p/h[h.length-6]-1:0;
+const month=h.length>=21?p/h[h.length-21]-1:0;
+
+const high20=Math.max(...last20);
+const low20=Math.min(...last20);
+
+const vol=avg(
+last5.slice(1).map(
+(x,i)=>Math.abs(x/last5[i]-1)
+)
+);
+
+let score=0;
+
+const reasons=[];
+
+if(p>ma5&&ma5>ma20){
+score+=2;
+reasons.push('preço acima das médias de 5 e 20 pregões');
+}
+
+if(p<ma5&&ma5<ma20){
+score-=2;
+reasons.push('preço abaixo das médias de 5 e 20 pregões');
+}
+
+if(week>0&&week<.06){
+score+=1;
+reasons.push('semana positiva sem forte esticamento');
+}
+
+if(week>.08){
+score-=1;
+reasons.push('alta semanal forte, com risco de realização');
+}
+
+if(week<-.06){
+score-=1;
+reasons.push('queda semanal relevante');
+}
+
+if(p>ma20&&p<high20*.98&&week>=0){
+score+=1;
+reasons.push('tendência positiva sem estar na máxima recente');
+}
+
+if(p<ma20&&p>low20*1.03&&week>0){
+score+=1;
+reasons.push('tentativa de recuperação');
+}
+
+let out;
+
+if(score>=3){
+out={
+label:'COMPRA TÉCNICA',
+cls:'signal-buy'
+};
+}else if(score>=1){
+out={
+label:'MANTER / OBSERVAR',
+cls:'signal-hold'
+};
+}else if(score<=-3){
+out={
+label:'VENDA / REDUZIR',
+cls:'signal-sell'
+};
+}else if(score<=-1){
+out={
+label:'CAUTELA',
+cls:'signal-warn'
+};
+}else{
+out={
+label:'NEUTRO',
+cls:'signal-none'
+};
+}
+
+return{
+...out,
+score,
+week,
+month,
+ma5,
+ma20,
+vol,
+why:reasons.slice(0,3).join('; ')||'Sem tendência técnica clara.'
+};
+}
+
+function renderCarteira(){
+const rows=STATE.portfolio.filter(
+x=>x.qty>0||Math.abs(x.realized)>0
+);
+
+if(!rows.length){
+$('tabelaCarteira').innerHTML='<div class="empty">Nenhuma posição registrada.</div>';
+return;
+}
+
+let html=
+'<div class="table-wrap">'+
+'<table class="table">'+
+'<thead>'+
+'<tr>'+
+'<th>Ativo</th>'+
+'<th>Qtd.</th>'+
+'<th>Preço médio</th>'+
+'<th>Cotação</th>'+
+'<th>Investido</th>'+
+'<th>Valor atual</th>'+
+'<th>Resultado aberto</th>'+
+'<th>Realizado</th>'+
+'<th>Semana</th>'+
+'<th>Sinal</th>'+
+'</tr>'+
+'</thead>'+
+'<tbody>';
+
+for(const x of rows){
+
+const s=signalFor(x.market);
+
+html+=`
+<tr>
+<td class="ticker">${esc(x.ticker)}</td>
+<td>${num(x.qty,4)}</td>
+<td>${brl(x.avg)}</td>
+<td class="price-badge">${x.quote===null?'—':brl(x.quote)}</td>
+<td>${brl(x.invested)}</td>
+<td>${x.current===null?'—':brl(x.current)}</td>
+<td class="${(x.unrealized||0)>=0?'positive':'negative'}">
+${x.unrealized===null?'—':`${brl(x.unrealized)} • ${pct(x.returnPct||0)}`}
+</td>
+<td class="${x.realized>=0?'positive':'negative'}">
+${brl(x.realized)}
+</td>
+<td class="${(s.week||0)>=0?'positive':'negative'}">
+${s.week===undefined?'—':pct(s.week)}
+</td>
+<td>
+<span class="signal ${s.cls}">
+${s.label}
+</span>
+</td>
+</tr>`;
+}
+
+html+='</tbody></table></div>';
+
+$('tabelaCarteira').innerHTML=html;
+}
+
+function renderOperacoes(){
+const data=[...STATE.operacoes].sort(
+(a,b)=>`${b.data}${b.criado_em||''}`.localeCompare(`${a.data}${a.criado_em||''}`)
+);
+
+if(!data.length){
+$('tabelaOperacoes').innerHTML='<div class="empty">Nenhuma compra ou venda registrada.</div>';
+return;
+}
+
+let html=
+'<div class="table-wrap">'+
+'<table class="table">'+
+'<thead>'+
+'<tr>'+
+'<th>Data</th>'+
+'<th>Tipo</th>'+
+'<th>Ativo</th>'+
+'<th>Qtd.</th>'+
+'<th>Preço</th>'+
+'<th>Taxas</th>'+
+'<th>Total</th>'+
+'<th>Observação</th>'+
+'<th></th>'+
+'</tr>'+
+'</thead>'+
+'<tbody>';
+
+for(const x of data){
+
+const total=
+n(x.quantidade)*n(x.preco_unitario)+
+(x.tipo==='COMPRA'?n(x.taxas):-n(x.taxas));
+
+html+=`
+<tr>
+<td>${dateBR(x.data)}</td>
+<td>
+<span class="signal ${x.tipo==='COMPRA'?'signal-buy':'signal-sell'}">
+${x.tipo}
+</span>
+</td>
+<td class="ticker">${esc(x.ticker)}</td>
+<td>${num(x.quantidade,4)}</td>
+<td>${brl(x.preco_unitario)}</td>
+<td>${brl(x.taxas)}</td>
+<td>${brl(total)}</td>
+<td>${esc(x.observacao||'')}</td>
+<td>
+<div class="toolbar">
+<button
+class="btn btn-soft btn-small"
+onclick="editarOperacao('${x.id}')">
+Editar
+</button>
+<button
+class="btn btn-danger btn-small"
+onclick="excluirOperacao('${x.id}')">
+Excluir
+</button>
+</div>
+</td>
+</tr>`;
+}
+
+html+='</tbody></table></div>';
+
+$('tabelaOperacoes').innerHTML=html;
+}
+
+function renderUltimas(){
+const d=[...STATE.operacoes]
+.sort(
+(a,b)=>`${b.data}${b.criado_em||''}`.localeCompare(`${a.data}${a.criado_em||''}`)
+)
+.slice(0,7);
+
+if(!d.length){
+$('ultimasOperacoes').innerHTML='<div class="empty">Sem operações.</div>';
+return;
+}
+
+$('ultimasOperacoes').innerHTML=
+'<div class="table-wrap">'+
+'<table class="table" style="min-width:560px">'+
+'<thead>'+
+'<tr>'+
+'<th>Data</th>'+
+'<th>Tipo</th>'+
+'<th>Ativo</th>'+
+'<th>Qtd.</th>'+
+'<th>Preço</th>'+
+'</tr>'+
+'</thead>'+
+'<tbody>'+
+d.map(x=>`
+<tr>
+<td>${dateBR(x.data)}</td>
+<td>${x.tipo}</td>
+<td class="ticker">${esc(x.ticker)}</td>
+<td>${num(x.quantidade,2)}</td>
+<td>${brl(x.preco_unitario)}</td>
+</tr>
+`).join('')+
+'</tbody>'+
+'</table>'+
+'</div>';
+}
+
+function renderProventos(){
+const total=STATE.proventos.reduce(
+(s,x)=>s+n(x.valor),
+0
+);
+
+const year=String(new Date().getFullYear());
+
+const ano=STATE.proventos
+.filter(x=>String(x.data).startsWith(year))
+.reduce(
+(s,x)=>s+n(x.valor),
+0
+);
+
+$('provTotal').textContent=brl(total);
+$('provAno').textContent=brl(ano);
+
+if(!STATE.proventos.length){
+$('tabelaProventos').innerHTML='<div class="empty">Nenhum provento registrado.</div>';
+return;
+}
+
+let html=
+'<div class="table-wrap">'+
+'<table class="table">'+
+'<thead>'+
+'<tr>'+
+'<th>Data</th>'+
+'<th>Ativo</th>'+
+'<th>Tipo</th>'+
+'<th>Valor</th>'+
+'<th>Observação</th>'+
+'<th></th>'+
+'</tr>'+
+'</thead>'+
+'<tbody>';
+
+for(const x of STATE.proventos){
+
+html+=`
+<tr>
+<td>${dateBR(x.data)}</td>
+<td class="ticker">${esc(x.ticker||'—')}</td>
+<td>${esc(x.tipo_renda)}</td>
+<td class="positive">${brl(x.valor)}</td>
+<td>${esc(x.observacao||'')}</td>
+<td>
+<div class="toolbar">
+<button
+class="btn btn-soft btn-small"
+onclick="editarProvento('${x.id}')">
+Editar
+</button>
+<button
+class="btn btn-danger btn-small"
+onclick="excluirProvento('${x.id}')">
+Excluir
+</button>
+</div>
+</td>
+</tr>`;
+}
+
+html+='</tbody></table></div>';
+
+$('tabelaProventos').innerHTML=html;
+}
+
+function renderAtivos(){
+if(!STATE.ativos.length){
+$('tabelaAtivos').innerHTML='<div class="empty">Nenhum ativo cadastrado.</div>';
+return;
+}
+
+let html=
+'<div class="table-wrap">'+
+'<table class="table" style="min-width:620px">'+
+'<thead>'+
+'<tr>'+
+'<th>Ticker</th>'+
+'<th>Categoria</th>'+
+'<th>Nome</th>'+
+'<th>Cotação</th>'+
+'<th></th>'+
+'</tr>'+
+'</thead>'+
+'<tbody>';
+
+for(const x of STATE.ativos){
+
+html+=`
+<tr>
+<td class="ticker">${esc(x.ticker)}</td>
+<td>${esc(x.categoria)}</td>
+<td>${esc(x.nome||'')}</td>
+<td>${priceOf(x.ticker)===null?'—':brl(priceOf(x.ticker))}</td>
+<td>
+<div class="toolbar">
+<button
+class="btn btn-soft btn-small"
+onclick="editarAtivo('${x.id}')">
+Editar
+</button>
+<button
+class="btn btn-danger btn-small"
+onclick="excluirAtivo('${x.id}')">
+Excluir
+</button>
+</div>
+</td>
+</tr>`;
+}
+
+html+='</tbody></table></div>';
+
+$('tabelaAtivos').innerHTML=html;
+}
+
+function renderIniciais(){
+if(!STATE.iniciais.length){
+$('tabelaIniciais').innerHTML='<div class="empty">Nenhum saldo inicial.</div>';
+return;
+}
+
+let html=
+'<div class="table-wrap">'+
+'<table class="table">'+
+'<thead>'+
+'<tr>'+
+'<th>Data base</th>'+
+'<th>Ativo</th>'+
+'<th>Qtd.</th>'+
+'<th>Preço médio</th>'+
+'<th>Total</th>'+
+'<th>Origem</th>'+
+'<th></th>'+
+'</tr>'+
+'</thead>'+
+'<tbody>';
+
+for(const x of STATE.iniciais){
+
+html+=`
+<tr>
+<td>${dateBR(x.data_base)}</td>
+<td class="ticker">${esc(x.ticker)}</td>
+<td>${num(x.quantidade,4)}</td>
+<td>${brl(x.preco_medio)}</td>
+<td>${brl(x.valor_total)}</td>
+<td>${esc(x.origem)}</td>
+<td>
+<div class="toolbar">
+<button
+class="btn btn-soft btn-small"
+onclick="editarInicial('${x.id}')">
+Editar
+</button>
+<button
+class="btn btn-danger btn-small"
+onclick="excluirInicial('${x.id}')">
+Excluir
+</button>
+</div>
+</td>
+</tr>`;
+}
+
+html+='</tbody></table></div>';
+
+$('tabelaIniciais').innerHTML=html;
+}
+
+function renderInsights(){
+const ativos=STATE.ativos.map(a=>({
+ticker:a.ticker,
+q:STATE.quotes[a.ticker],
+s:signalFor(STATE.quotes[a.ticker])
+}));
+
+if(!ativos.length){
+$('insights').innerHTML='<div class="empty">Sem ativos.</div>';
+return;
+}
+
+$('insights').innerHTML=ativos.map(x=>`
+<div class="insight">
+
+<div class="insight-top">
+
+<div>
+<div class="ticker">${esc(x.ticker)}</div>
+<div class="muted tiny">
+${x.q?.price?brl(x.q.price):'Cotação indisponível'}
+</div>
+</div>
+
+<span class="signal ${x.s.cls}">
+${x.s.label}
+</span>
+
+</div>
+
+<div class="metrics">
+
+<div class="metric">
+<span>Semana</span>
+<b class="${(x.s.week||0)>=0?'positive':'negative'}">
+${x.s.week===undefined?'—':pct(x.s.week)}
+</b>
+</div>
+
+<div class="metric">
+<span>20 pregões</span>
+<b class="${(x.s.month||0)>=0?'positive':'negative'}">
+${x.s.month===undefined?'—':pct(x.s.month)}
+</b>
+</div>
+
+<div class="metric">
+<span>Vol. 5d</span>
+<b>
+${x.s.vol===undefined?'—':pct(x.s.vol)}
+</b>
+</div>
+
+</div>
+
+<div
+class="tiny muted"
+style="margin-top:9px;line-height:1.45">
+${esc(x.s.why)}
+</div>
+
+</div>
+`).join('');
+}
+
+function renderGraficos(){
+if(typeof Chart==='undefined')return;
+
+const open=STATE.portfolio.filter(
+x=>x.qty>0
+);
+
+if(STATE.charts.carteira){
+STATE.charts.carteira.destroy();
+}
+
+STATE.charts.carteira=new Chart(
+$('grafCarteira'),
+{
+type:'bar',
+
+data:{
+labels:open.map(x=>x.ticker),
+
+datasets:[
+{
+label:'Preço médio',
+data:open.map(x=>x.avg)
+},
+{
+label:'Cotação',
+data:open.map(x=>x.quote??x.avg)
+}
+]
+},
+
+options:{
+responsive:true,
+maintainAspectRatio:false,
+
+plugins:{
+legend:{
+position:'bottom'
+},
+
+tooltip:{
+callbacks:{
+label:c=>`${c.dataset.label}: ${brl(c.raw)}`
+}
+}
+},
+
+scales:{
+y:{
+ticks:{
+callback:v=>`R$ ${num(v,0)}`
+}
+}
+}
+}
+}
+);
+
+const result=STATE.portfolio.filter(
+x=>x.qty>0||x.realized
+);
+
+if(STATE.charts.resultado){
+STATE.charts.resultado.destroy();
+}
+
+STATE.charts.resultado=new Chart(
+$('grafResultado'),
+{
+type:'bar',
+
+data:{
+labels:result.map(x=>x.ticker),
+
+datasets:[
+{
+label:'Resultado aberto',
+data:result.map(x=>x.unrealized||0)
+},
+{
+label:'Resultado realizado',
+data:result.map(x=>x.realized)
+}
+]
+},
+
+options:{
+responsive:true,
+maintainAspectRatio:false,
+
+plugins:{
+legend:{
+position:'bottom'
+},
+
+tooltip:{
+callbacks:{
+label:c=>`${c.dataset.label}: ${brl(c.raw)}`
+}
+}
+},
+
+scales:{
+y:{
+ticks:{
+callback:v=>`R$ ${num(v,0)}`
+}
+}
+}
+}
+}
+);
+}
+
+async function fetchQuoteBrapi(ticker,token){
+const u=
+`https://brapi.dev/api/quote/${encodeURIComponent(ticker)}`+
+'?range=3mo&interval=1d&fundamental=false&dividends=false';
+
+const r=await fetch(
+u,
+{
+headers:{
+Authorization:`Bearer ${token}`
+}
+}
+);
+
+if(!r.ok){
+throw new Error(`BRAPI ${r.status}`);
+}
+
+const j=await r.json();
+const x=j.results?.[0];
+
+if(!x){
+throw new Error('Ativo não encontrado');
+}
+
+const hist=
+(x.historicalDataPrice||[])
+.filter(h=>h.close!=null)
+.map(h=>({
+ts:h.date*1000,
+close:Number(h.close)
+}));
+
+return{
+ticker,
+price:Number(x.regularMarketPrice),
+changePct:Number(x.regularMarketChangePercent||0)/100,
+history:hist,
+name:x.longName||x.shortName||ticker,
+source:'BRAPI',
+asOf:x.regularMarketTime?
+x.regularMarketTime*1000:
+Date.now()
+};
+}
+
+async function fetchQuotesEdge(tickers){
+const{data,error}=await sb.functions.invoke(
+'leonardo-cotacoes',
+{
+body:{
+tickers
+}
+}
+);
+
+if(error)throw error;
+
+if(data?.error){
+throw new Error(data.error);
+}
+
+return data||{
+results:[],
+errors:[]
+};
+}
+
+async function atualizarCotacoes(show=true){
+if(!STATE.user)return;
+
+if(show)setLoading(true);
+
+$('quoteStatus').textContent='COTAÇÃO: atualizando...';
+$('marketDot').className='dot';
+$('marketText').textContent='Consultando mercado...';
+
+const tickers=[
+...new Set(
+STATE.ativos
+.filter(a=>a.ativo!==false)
+.map(a=>a.ticker)
+)
+];
+
+if(!tickers.length){
+$('quoteStatus').textContent='COTAÇÃO: sem ativos';
+$('marketText').textContent='Cadastre um ativo para consultar cotações.';
+if(show)setLoading(false);
+return;
+}
+
+let ok=0;
+let fail=0;
+let source='';
+
+try{
+
+const edge=await fetchQuotesEdge(tickers);
+
+for(const q of(edge.results||[])){
+STATE.quotes[tickerUpper(q.ticker)]=q;
+ok++;
+}
+
+fail=(edge.errors||[]).length;
+
+source=ok?'YAHOO':'';
+
+if(
+fail&&
+localStorage.getItem('leonardo_brapi_token')
+){
+
+const token=
+localStorage.getItem('leonardo_brapi_token');
+
+const faltantes=
+(edge.errors||[]).map(x=>x.ticker);
+
+const backup=
+await Promise.allSettled(
+faltantes.map(
+async t=>[
+t,
+await fetchQuoteBrapi(t,token)
+]
+)
+);
+
+for(const r of backup){
+
+if(r.status==='fulfilled'){
+
+const[t,q]=r.value;
+
+STATE.quotes[tickerUpper(t)]=q;
+
+ok++;
+
+fail=Math.max(
+0,
+fail-1
+);
+
+source=
+source?
+`${source}+BRAPI`:
+'BRAPI';
+
+}
+}
+
+}
+
+}catch(e){
+
+console.warn(
+'Edge de cotação indisponível',
+e
+);
+
+const token=
+localStorage.getItem(
+'leonardo_brapi_token'
+);
+
+if(token){
+
+const backup=
+await Promise.allSettled(
+tickers.map(
+async t=>[
+t,
+await fetchQuoteBrapi(t,token)
+]
+)
+);
+
+for(const r of backup){
+
+if(r.status==='fulfilled'){
+
+const[t,q]=r.value;
+
+STATE.quotes[tickerUpper(t)]=q;
+
+ok++;
+
+}else{
+
+fail++;
+
+}
+
+}
+
+source=
+ok?
+'BRAPI':
+'';
+
+}else{
+
+fail=tickers.length;
+
+}
+
+}
+
+calcularPortfolio();
+
+renderKpis();
+renderCarteira();
+renderAtivos();
+renderInsights();
+renderGraficos();
+
+if(ok){
+
+$('quoteStatus').textContent=
+`COTAÇÃO: ${ok}/${tickers.length} • ${source}`;
+
+$('marketDot').className='dot ok';
+
+$('marketText').textContent=
+`${ok} ativo(s) atualizado(s). `+
+`${fail?`${fail} sem cotação. `:''}`+
+`Fonte: ${source}.`;
+
+}else{
+
+$('quoteStatus').textContent=
+'COTAÇÃO: indisponível';
+
+$('marketDot').className=
+'dot err';
+
+$('marketText').textContent=
+'Nenhum ticker foi localizado. Se os códigos estiverem anonimizados, renomeie-os para os tickers reais.';
+
+}
+
+if(show){
+
+setLoading(false);
+
+flash(
+ok?
+'Cotações atualizadas.':
+'Não foi possível atualizar as cotações.',
+ok?
+'success':
+'error'
+);
+
+}
+}
+
+function startRefresh(){
+clearInterval(STATE.refreshTimer);
+
+STATE.refreshTimer=
+setInterval(
+()=>atualizarCotacoes(false),
+300000
+);
+}
+
+async function saveOperacao(e){
+e.preventDefault();
+
+const id=$('opId').value;
+
+const row={
+user_id:STATE.user.id,
+data:$('opData').value,
+tipo:$('opTipo').value,
+ticker:tickerUpper($('opTicker').value),
+quantidade:n($('opQtd').value),
+preco_unitario:n($('opPreco').value),
+taxas:n($('opTaxas').value),
+observacao:$('opObs').value.trim()||null
+};
+
+if(
+!row.data||
+!row.ticker||
+row.quantidade<=0||
+row.preco_unitario<0
+){
+return flash(
+'Preencha os campos obrigatórios.',
+'error'
+);
+}
+
+const candidate=
+STATE.operacoes
+.filter(x=>x.id!==id)
+.concat({
+...row,
+id:id||'novo',
+criado_em:id?
+(
+STATE.operacoes.find(x=>x.id===id)?.criado_em||''
+):
+new Date().toISOString()
+});
+
+const valid=
+validarCarteira(candidate);
+
+if(!valid.ok){
+
+return flash(
+`Venda maior que a posição disponível em ${valid.ticker} na data ${dateBR(valid.data)}.`,
+'error'
+);
+
+}
+
+const q=id?
+sb
+.from('leonardo_acoes_operacoes')
+.update({
+...row,
+atualizado_em:new Date().toISOString()
+})
+.eq('id',id):
+sb
+.from('leonardo_acoes_operacoes')
+.insert(row);
+
+const{error}=await q;
+
+if(error){
+return flash(
+error.message,
+'error'
+);
+}
+
+resetOperacao();
+
+await carregarTudo();
+
+flash(
+'Operação salva.',
+'success'
+);
+}
+
+function editarOperacao(id){
+const x=
+STATE.operacoes.find(
+v=>v.id===id
+);
+
+if(!x)return;
+
+showPage('operacoes');
+
+$('opId').value=x.id;
+$('opData').value=x.data;
+$('opTipo').value=x.tipo;
+$('opTicker').value=x.ticker;
+$('opQtd').value=x.quantidade;
+$('opPreco').value=x.preco_unitario;
+$('opTaxas').value=x.taxas;
+$('opObs').value=x.observacao||'';
+
+$('btnCancelarOperacao')
+.classList
+.remove('hidden');
+
+window.scrollTo({
+top:0,
+behavior:'smooth'
+});
+}
+
+function resetOperacao(){
+$('formOperacao').reset();
+
+$('opId').value='';
+
+$('opData').value=today();
+
+$('opTaxas').value='0';
+
+$('btnCancelarOperacao')
+.classList
+.add('hidden');
+
+syncSelects();
+}
+
+async function excluirOperacao(id){
+if(!confirm('Excluir esta operação?'))return;
+
+const{error}=
+await sb
+.from('leonardo_acoes_operacoes')
+.delete()
+.eq('id',id);
+
+if(error){
+return flash(
+error.message,
+'error'
+);
+}
+
+await carregarTudo();
+
+flash(
+'Operação excluída.',
+'success'
+);
+}
+
+async function saveProvento(e){
+e.preventDefault();
+
+const id=$('provId').value;
+
+const row={
+user_id:STATE.user.id,
+data:$('provData').value,
+ticker:$('provTicker').value||null,
+tipo_renda:$('provTipo').value,
+valor:n($('provValor').value),
+observacao:$('provObs').value.trim()||null
+};
+
+if(
+!row.data||
+row.valor<0
+){
+return flash(
+'Preencha os dados do provento.',
+'error'
+);
+}
+
+const q=id?
+sb
+.from('leonardo_acoes_proventos')
+.update(row)
+.eq('id',id):
+sb
+.from('leonardo_acoes_proventos')
+.insert(row);
+
+const{error}=await q;
+
+if(error){
+return flash(
+error.message,
+'error'
+);
+}
+
+resetProvento();
+
+await carregarTudo();
+
+flash(
+'Provento salvo.',
+'success'
+);
+}
+
+function editarProvento(id){
+const x=
+STATE.proventos.find(
+v=>v.id===id
+);
+
+if(!x)return;
+
+showPage('proventos');
+
+$('provId').value=x.id;
+$('provData').value=x.data;
+$('provTicker').value=x.ticker||'';
+$('provTipo').value=x.tipo_renda;
+$('provValor').value=x.valor;
+$('provObs').value=x.observacao||'';
+
+$('btnCancelarProv')
+.classList
+.remove('hidden');
+}
+
+function resetProvento(){
+$('formProvento').reset();
+
+$('provId').value='';
+
+$('provData').value=today();
+
+$('btnCancelarProv')
+.classList
+.add('hidden');
+
+syncSelects();
+}
+
+async function excluirProvento(id){
+if(!confirm('Excluir este provento?'))return;
+
+const{error}=
+await sb
+.from('leonardo_acoes_proventos')
+.delete()
+.eq('id',id);
+
+if(error){
+return flash(
+error.message,
+'error'
+);
+}
+
+await carregarTudo();
+
+flash(
+'Provento excluído.',
+'success'
+);
+}
+
+async function saveAtivo(e){
+e.preventDefault();
+
+const id=$('ativoId').value;
+
+const old=
+tickerUpper(
+$('ativoTickerOriginal').value
+);
+
+const ticker=
+tickerUpper(
+$('ativoTicker').value
+);
+
+const row={
+user_id:STATE.user.id,
+ticker,
+nome:$('ativoNome').value.trim()||ticker,
+categoria:$('ativoCategoria').value,
+ativo:true,
+atualizado_em:new Date().toISOString()
+};
+
+if(!ticker){
+return flash(
+'Informe o ticker.',
+'error'
+);
+}
+
+if(
+id&&
+old&&
+old!==ticker
+){
+
+const dup=
+STATE.ativos.some(
+a=>
+a.ticker===ticker&&
+a.id!==id
+);
+
+if(dup){
+return flash(
+'Esse ticker já está cadastrado.',
+'error'
+);
+}
+
+const updates=[
+sb
+.from('leonardo_acoes_posicoes_iniciais')
+.update({ticker})
+.eq('ticker',old),
+
+sb
+.from('leonardo_acoes_operacoes')
+.update({
+ticker,
+atualizado_em:new Date().toISOString()
+})
+.eq('ticker',old),
+
+sb
+.from('leonardo_acoes_proventos')
+.update({ticker})
+.eq('ticker',old)
+];
+
+for(const p of updates){
+
+const r=await p;
+
+if(r.error){
+
+return flash(
+`Não foi possível renomear: ${r.error.message}`,
+'error'
+);
+
+}
+}
+}
+
+const q=id?
+sb
+.from('leonardo_acoes_ativos')
+.update(row)
+.eq('id',id):
+sb
+.from('leonardo_acoes_ativos')
+.insert({
+...row,
+origem:'manual'
+});
+
+const{error}=await q;
+
+if(error){
+return flash(
+error.message,
+'error'
+);
+}
+
+resetAtivo();
+
+STATE.quotes={};
+
+await carregarTudo();
+
+flash(
+old&&old!==ticker?
+`Ticker alterado de ${old} para ${ticker}.`:
+'Ativo salvo.',
+'success'
+);
+}
+
+function editarAtivo(id){
+const x=
+STATE.ativos.find(
+v=>v.id===id
+);
+
+if(!x)return;
+
+showPage('ativos');
+
+$('ativoId').value=x.id;
+
+$('ativoTickerOriginal').value=
+x.ticker;
+
+$('ativoTicker').value=
+x.ticker;
+
+$('ativoNome').value=
+x.nome||'';
+
+$('ativoCategoria').value=
+x.categoria;
+
+$('btnCancelarAtivo')
+.classList
+.remove('hidden');
+}
+
+function resetAtivo(){
+$('formAtivo').reset();
+
+$('ativoId').value='';
+
+$('ativoTickerOriginal').value='';
+
+$('btnCancelarAtivo')
+.classList
+.add('hidden');
+}
+
+async function excluirAtivo(id){
+const a=
+STATE.ativos.find(
+x=>x.id===id
+);
+
+if(!a)return;
+
+const used=
+STATE.operacoes.some(
+x=>x.ticker===a.ticker
+)||
+STATE.iniciais.some(
+x=>x.ticker===a.ticker
+)||
+STATE.proventos.some(
+x=>x.ticker===a.ticker
+);
+
+if(used){
+
+return flash(
+'Este ativo possui saldo, operação ou provento. Renomeie-o em vez de excluir.',
+'error'
+);
+
+}
+
+if(
+!confirm(
+`Excluir ${a.ticker}?`
+)
+)return;
+
+const{error}=
+await sb
+.from('leonardo_acoes_ativos')
+.delete()
+.eq('id',id);
+
+if(error){
+return flash(
+error.message,
+'error'
+);
+}
+
+await carregarTudo();
+
+flash(
+'Ativo excluído.',
+'success'
+);
+}
+
+async function saveInicial(e){
+e.preventDefault();
+
+const id=
+$('iniId').value;
+
+const row={
+user_id:STATE.user.id,
+data_base:$('iniData').value,
+ticker:tickerUpper($('iniTicker').value),
+quantidade:n($('iniQtd').value),
+preco_medio:n($('iniPreco').value),
+valor_total:n($('iniTotal').value),
+observacao:'Saldo inicial / posição anterior',
+origem:id?
+(
+STATE.iniciais.find(x=>x.id===id)?.origem||
+'manual'
+):
+'manual'
+};
+
+if(
+!row.data_base||
+!row.ticker||
+row.quantidade<=0
+){
+return flash(
+'Preencha o saldo inicial.',
+'error'
+);
+}
+
+const q=id?
+sb
+.from('leonardo_acoes_posicoes_iniciais')
+.update(row)
+.eq('id',id):
+sb
+.from('leonardo_acoes_posicoes_iniciais')
+.insert(row);
+
+const{error}=await q;
+
+if(error){
+return flash(
+error.message,
+'error'
+);
+}
+
+resetInicial();
+
+await carregarTudo();
+
+flash(
+'Saldo inicial salvo.',
+'success'
+);
+}
+
+function editarInicial(id){
+const x=
+STATE.iniciais.find(
+v=>v.id===id
+);
+
+if(!x)return;
+
+showPage('ativos');
+
+$('iniId').value=x.id;
+$('iniData').value=x.data_base;
+$('iniTicker').value=x.ticker;
+$('iniQtd').value=x.quantidade;
+$('iniPreco').value=x.preco_medio;
+$('iniTotal').value=x.valor_total;
+
+$('btnCancelarInicial')
+.classList
+.remove('hidden');
+}
+
+function resetInicial(){
+$('formInicial').reset();
+
+$('iniId').value='';
+
+$('iniData').value='2025-12-31';
+
+$('btnCancelarInicial')
+.classList
+.add('hidden');
+
+syncSelects();
+}
+
+async function excluirInicial(id){
+if(!confirm('Excluir este saldo inicial?'))return;
+
+const{error}=
+await sb
+.from('leonardo_acoes_posicoes_iniciais')
+.delete()
+.eq('id',id);
+
+if(error){
+return flash(
+error.message,
+'error'
+);
+}
+
+await carregarTudo();
+
+flash(
+'Saldo inicial excluído.',
+'success'
+);
+}
+
+function useCurrentQuote(){
+const t=
+$('opTicker').value;
+
+const p=
+priceOf(t);
+
+if(p===null){
+return flash(
+'Cotação atual indisponível para este ticker.',
+'error'
+);
+}
+
+$('opPreco').value=p;
+
+flash(
+`Cotação de ${t}: ${brl(p)}`,
+'success'
+);
+}
+
+function exportCsv(){
+const head=[
+'data',
+'tipo',
+'ticker',
+'quantidade',
+'preco_unitario',
+'taxas',
+'total',
+'observacao'
+];
+
+const lines=[
+head.join(';'),
+...STATE.operacoes.map(x=>[
+x.data,
+x.tipo,
+x.ticker,
+x.quantidade,
+x.preco_unitario,
+x.taxas,
+n(x.quantidade)*n(x.preco_unitario)+
+(
+x.tipo==='COMPRA'?
+n(x.taxas):
+-n(x.taxas)
+),
+`"${String(x.observacao||'').replaceAll('"','""')}"`
+].join(';'))
+];
+
+const blob=
+new Blob(
+[
+'\ufeff'+
+lines.join('\n')
+],
+{
+type:'text/csv;charset=utf-8'
+}
+);
+
+const a=
+document.createElement('a');
+
+a.href=
+URL.createObjectURL(blob);
+
+a.download=
+`acoes-leonardo-operacoes-${today()}.csv`;
+
+a.click();
+
+URL.revokeObjectURL(a.href);
+}
+
+function showPage(name){
+document
+.querySelectorAll('.page')
+.forEach(
+x=>
+x.classList.toggle(
+'active',
+x.id===`page-${name}`
+)
+);
+
+document
+.querySelectorAll('#navTabs button')
+.forEach(
+x=>
+x.classList.toggle(
+'active',
+x.dataset.page===name
+)
+);
+}
+
+function bind(){
+document
+.querySelectorAll('#navTabs button')
+.forEach(
+b=>
+b.onclick=
+()=>showPage(b.dataset.page)
+);
+
+document
+.querySelectorAll('[data-go]')
+.forEach(
+b=>
+b.onclick=
+()=>showPage(b.dataset.go)
+);
+
+$('formOperacao').onsubmit=
+saveOperacao;
+
+$('btnCancelarOperacao').onclick=
+resetOperacao;
+
+$('btnUsarCotacao').onclick=
+useCurrentQuote;
+
+$('btnExportarCsv').onclick=
+exportCsv;
+
+$('formProvento').onsubmit=
+saveProvento;
+
+$('btnCancelarProv').onclick=
+resetProvento;
+
+$('formAtivo').onsubmit=
+saveAtivo;
+
+$('btnCancelarAtivo').onclick=
+resetAtivo;
+
+$('formInicial').onsubmit=
+saveInicial;
+
+$('btnCancelarInicial').onclick=
+resetInicial;
+
+$('btnAtualizarCotacoes').onclick=
+()=>atualizarCotacoes(true);
+
+$('btnAtualizarCotacoes2').onclick=
+()=>atualizarCotacoes(true);
+
+$('btnSalvarToken').onclick=()=>{
+
+const v=
+$('brapiToken').value.trim();
+
+if(v){
+
+localStorage.setItem(
+'leonardo_brapi_token',
+v
+);
+
+flash(
+'Token BRAPI salvo neste navegador.',
+'success'
+);
+
+atualizarCotacoes(true);
+
+}
+};
+
+$('btnLimparToken').onclick=()=>{
+
+localStorage.removeItem(
+'leonardo_brapi_token'
+);
+
+$('brapiToken').value='';
+
+flash(
+'Token removido.',
+'success'
+);
+
+};
+
+const atualizarTotal=()=>{
+
+$('iniTotal').value=
+(
+n($('iniQtd').value)*
+n($('iniPreco').value)
+).toFixed(2);
+
+};
+
+$('iniQtd').oninput=
+atualizarTotal;
+
+$('iniPreco').oninput=
+atualizarTotal;
+
+$('opData').value=
+today();
+
+$('provData').value=
+today();
+
+$('iniData').value=
+'2025-12-31';
+
+const token=
+localStorage.getItem(
+'leonardo_brapi_token'
+);
+
+if(token){
+$('brapiToken').value=
+token;
+}
+}
+
+window.editarOperacao=
+editarOperacao;
+
+window.excluirOperacao=
+excluirOperacao;
+
+window.editarProvento=
+editarProvento;
+
+window.excluirProvento=
+excluirProvento;
+
+window.editarAtivo=
+editarAtivo;
+
+window.excluirAtivo=
+excluirAtivo;
+
+window.editarInicial=
+editarInicial;
+
+window.excluirInicial=
+excluirInicial;
+
+sb.auth.onAuthStateChange(
+(event,session)=>{
+
+if(session?.user){
+STATE.user=session.user;
+}
+
+if(event==='SIGNED_OUT'){
+
+STATE.user=null;
+
+STATE.authReady=false;
+
+clearInterval(
+STATE.refreshTimer
+);
+
+$('appShell')
+?.classList
+.add('hidden');
+
+$('authShell')
+?.classList
+.remove('hidden');
+
+setTimeout(
+()=>authInit(),
+0
+);
+
+}
+}
+);
+
 bind();
 authInit();
